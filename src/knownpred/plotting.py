@@ -661,12 +661,152 @@ def fig_smyle(run_dir: Path, out: Path, tables: Path):
     _save(fig, out / "fig11_part_b_smyle.png")
 
 
+def _nclimgrid_correlation(
+    raw: Path, processed: Path, cache: Path, box=(25.0, 50.0, -125.0, -100.0), coarsen=6
+):
+    """Correlation of October Nino-3.4 (observed) with Jan-Mar nClimGrid
+    precipitation on a coarsened (6 x 1/24 deg = 0.25 deg) western-US grid,
+    1896-2025. Cached as NetCDF because the source file is ~5 GB."""
+    import xarray as xr
+
+    if cache.exists():
+        return xr.open_dataarray(cache).load()
+    f = raw / "nclimgrid_prcp.nc"
+    if not f.exists():
+        return None
+    obs = pd.read_csv(processed / "samples_obs.csv").set_index("year")
+    ds = xr.open_dataset(f, chunks={"time": 60})
+    pr = ds["prcp"].sortby("lat").sel(lat=slice(box[0], box[1]), lon=slice(box[2], box[3]))
+    pr = pr.sel(time=pr["time"].dt.month.isin([1, 2, 3]))
+    pr = pr.coarsen(lat=coarsen, lon=coarsen, boundary="trim").mean()
+    jfm = pr.groupby(pr["time"].dt.year.rename("year")).mean("time").compute()
+    years = sorted(set(jfm["year"].values) & set(obs.index))
+    x = xr.DataArray(obs.loc[years, "nino34"].to_numpy(), dims="year", coords={"year": years})
+    y = jfm.sel(year=years)
+    corr = xr.corr(x, y, dim="year")
+    corr.name = "corr"
+    corr.attrs = {
+        "description": "corr(Oct Nino-3.4, Jan-Mar precipitation), nClimGrid, "
+        f"{years[0]}-{years[-1]}"
+    }
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    corr.to_netcdf(cache)
+    return corr
+
+
+def fig_map(processed: Path, raw: Path, run_dir: Path, out: Path, regions: dict):
+    """Fig. 0: where the Part B predictors and target are.
+
+    a) EOF 1 of October tropical Pacific SST anomalies (CESM2-LE training
+       members), with the Nino-3.4 box and the target box.
+    b) Observed correlation of October Nino-3.4 with Jan-Mar precipitation
+       over the western US (nClimGrid), with the target box.
+    """
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
+    from matplotlib.patches import Rectangle
+
+    # Explicit 1:50m Natural Earth layers (no automatic scale switching).
+    LAND = cfeature.NaturalEarthFeature("physical", "land", "50m")
+    COAST = cfeature.NaturalEarthFeature("physical", "coastline", "50m", facecolor="none")
+    STATES = cfeature.NaturalEarthFeature(
+        "cultural", "admin_1_states_provinces_lakes", "50m", facecolor="none"
+    )
+    BORDERS = cfeature.NaturalEarthFeature(
+        "cultural", "admin_0_boundary_lines_land", "50m", facecolor="none"
+    )
+
+    f = processed / "eof.npz"
+    if not f.exists():
+        return
+    d = np.load(f)
+    pat = d["patterns"][0] / np.nanmax(np.abs(d["patterns"][0]))
+    lat, lon = d["lat"], d["lon"]
+    corr = _nclimgrid_correlation(raw, processed, run_dir / "nclimgrid_nino34_corr.nc")
+
+    def box(ax, b, color, label, lw=1.6):
+        (s, n), (w, e) = b["lat"], b["lon"]
+        ax.add_patch(
+            Rectangle(
+                (w, s),
+                e - w,
+                n - s,
+                transform=ccrs.PlateCarree(),
+                fill=False,
+                edgecolor=color,
+                linewidth=lw,
+                zorder=5,
+            )
+        )
+        ax.text(
+            w,
+            n + 1.0,
+            label,
+            transform=ccrs.PlateCarree(),
+            color=color,
+            fontsize=8,
+            fontweight="bold",
+            zorder=6,
+        )
+
+    fig = plt.figure(figsize=(13, 4.4))
+    gs = fig.add_gridspec(1, 2, width_ratios=[2.1, 1])
+    ax = fig.add_subplot(gs[0], projection=ccrs.PlateCarree(central_longitude=200))
+    ax.set_extent([110, 300, -35, 50], crs=ccrs.PlateCarree())
+    m = ax.pcolormesh(
+        lon, lat, pat, cmap="RdBu_r", vmin=-1, vmax=1, transform=ccrs.PlateCarree(), shading="auto"
+    )
+    ax.add_feature(LAND, facecolor="#e4e3df", zorder=2)
+    ax.add_feature(COAST, linewidth=0.5, edgecolor=MUTED, zorder=3)
+    ax.add_feature(STATES, linewidth=0.3, edgecolor=MUTED, zorder=3)
+    box(ax, regions["nino34"], INK, "Niño-3.4")
+    box(ax, regions["sst_domain"], INK2, "SST predictor domain", lw=0.8)
+    box(ax, regions["target_box"], "#eb6834", "target: U.S. Southwest")
+    gl = ax.gridlines(draw_labels=True, linewidth=0.3, color=GRID)
+    gl.top_labels = gl.right_labels = False
+    cb = fig.colorbar(m, ax=ax, orientation="horizontal", fraction=0.05, pad=0.08, shrink=0.6)
+    cb.set_label("EOF 1 loading (normalised)")
+    ax.set_title(
+        f"a  Leading pattern of October SST anomalies, CESM2-LE ({d['evr'][0] * 100:.0f} % of variance)",
+        loc="left",
+    )
+
+    ax = fig.add_subplot(gs[1], projection=ccrs.PlateCarree())
+    ax.set_extent([-125, -100, 25, 50], crs=ccrs.PlateCarree())
+    if corr is not None:
+        m2 = ax.pcolormesh(
+            corr["lon"],
+            corr["lat"],
+            corr,
+            cmap="BrBG",
+            vmin=-0.6,
+            vmax=0.6,
+            transform=ccrs.PlateCarree(),
+            shading="auto",
+        )
+        cb2 = fig.colorbar(m2, ax=ax, orientation="horizontal", fraction=0.05, pad=0.08, shrink=0.8)
+        cb2.set_label("correlation")
+    ax.add_feature(COAST, linewidth=0.5, edgecolor=INK2)
+    ax.add_feature(STATES, linewidth=0.4, edgecolor=INK2)
+    ax.add_feature(BORDERS, linewidth=0.6, edgecolor=INK2)
+    box(ax, regions["target_box"], "#eb6834", "target box", lw=2.0)
+    gl = ax.gridlines(draw_labels=True, linewidth=0.3, color=GRID)
+    gl.top_labels = gl.right_labels = False
+    period = corr.attrs.get("description", "").split(", ")[-1] if corr is not None else ""
+    ax.set_title(
+        f"b  Oct Niño-3.4 vs Jan–Mar precipitation\n    (observed, nClimGrid {period})", loc="left"
+    )
+    fig.tight_layout()
+    _save(fig, out / "fig0_part_b_map.png")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--part-a", default="runs/part_a")
     ap.add_argument("--part-b", default="runs/part_b")
     ap.add_argument("--figures", default="results/figures")
     ap.add_argument("--tables", default="results/tables")
+    ap.add_argument("--config-b", default="configs/part_b.yaml")
     args = ap.parse_args(argv)
     _style()
     a, figs, tabs = Path(args.part_a), Path(args.figures), Path(args.tables)
@@ -686,6 +826,19 @@ def main(argv=None):
         fig_pit(a, figs)
         tables_part_a(a, tabs)
     if Path(args.part_b).exists():
+        import yaml
+
+        cfg_b = yaml.safe_load(Path(args.config_b).read_text())
+        try:
+            fig_map(
+                Path(cfg_b["paths"]["processed"]),
+                Path(cfg_b["paths"]["raw"]),
+                Path(args.part_b),
+                figs,
+                cfg_b["regions"],
+            )
+        except ImportError:
+            print("cartopy not installed: skipping the map figure (pip install cartopy)")
         figs_part_b(Path(args.part_b), figs, tabs)
         fig_part_b_confidence(Path(args.part_b), figs, tabs)
         fig_smyle(Path(args.part_b), figs, tabs)

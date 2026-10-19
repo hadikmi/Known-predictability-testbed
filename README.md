@@ -6,8 +6,12 @@ Neural networks that predict a full distribution instead of a single value are i
 
 This repository builds a small stochastic climate system in which the true forecast distribution can be computed for every state, and uses it to test uncertainty-aware models (Part A). It then applies the same pipeline to real data: training on the CESM2 Large Ensemble and evaluating on observations (Part B).
 
-![The toy system](results/figures/fig1_system.png)
-*(a) The ENSO-like index of the toy system. (b) True forecast spread of the storage anomaly by issue month and lead (line: mean; band: 10–90 % range across states). (c) For forecasts issued at the end of October, the true spread grows with the ENSO state: a built-in window of opportunity during La Niña.*
+![Predicted vs true spread](results/figures/fig2_sigma_vs_truth_lead3.png)
+*The core comparison this testbed makes possible. Each point is one test forecast (3-month lead): the spread a model predicted against the true spread of the system from that state. Linear regression can only vary its spread with the season (horizontal bands). Gradient boosting follows the truth loosely. The probabilistic networks follow it closely, but still only partly within each season (rank correlation 0.53–0.56).*
+
+**At a glance.**
+- **Part A (synthetic, exact truth):** the networks recovered the true forecast spread best and beat linear regression at 1–3 month leads (formally significant). Every model still attributed some spread to irrelevant inputs, became overconfident when the system changed, and needed long records to learn the spread.
+- **Part B (CESM2-LE → observations, U.S. Southwest winter precipitation):** skill over climatology is modest. With multiple-testing control, no model is significantly better than climatology or than linear regression in the 130-year observed record. A perfect-model truth from initialised CESM2 SMYLE hindcasts (1971–2021) is used to test the networks' year-by-year confidence.
 
 ## Questions
 
@@ -29,6 +33,9 @@ Three coupled components, all monthly (full equations and parameters: [`docs/met
 
 The forecast models observe the full state (ENSO index, thermocline, storage, calendar month) and two irrelevant "distractor" series. The true forecast distribution for any test state is therefore obtained by running 1000 stochastic continuations from it. This makes some exact statements possible. For example, the true spread does not depend on current storage (storage shifts only the mean) or on the distractors. Real-world attribution studies have no such reference.
 
+![The toy system](results/figures/fig1_system.png)
+*(a) The ENSO-like index of the toy system. (b) True forecast spread of the storage anomaly by issue month and lead (line: mean; band: 10–90 % range across states). (c) For forecasts issued at the end of October, the true spread grows with the ENSO state: a built-in window of opportunity during La Niña.*
+
 ## Part A results
 
 Test set: 500 independent simulated years. Training: 1000 years. Lead: 3 months. Brackets are 95 % block-bootstrap intervals. All six models were run on CPU in 13 minutes ([`docs/reproducibility.md`](docs/reproducibility.md)).
@@ -44,8 +51,6 @@ Test set: 500 independent simulated years. Training: 1000 years. Lead: 3 months.
 | truth (ideal forecast) | 0.572 [0.541, 0.600] | 0 | 1 | 1 | 0 | 0 | 0.005 | 0.902 |
 
 All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md).
-
-![Predicted vs true spread](results/figures/fig2_sigma_vs_truth_lead3.png)
 
 **Q1. Does the predicted spread follow the true spread?**
 - **The networks recovered the spread more closely than the other models.**
@@ -75,7 +80,9 @@ All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md
   - networks' 90 % intervals covered 83–86 % of outcomes.
 - The networks were no better calibrated after the change than the linear model, although they were closer to the truth before it.
 
-**Q5. How much training data is needed?** ([fig. 7](results/figures/fig7_training_length.png))
+**Q5. How much training data is needed?**
+
+![Training length](results/figures/fig7_training_length.png)
 - **At 70 years the networks were worse than the linear model.** Their excess CRPS was 1.5–1.8 mm against 1.3 mm, and their 90 % intervals covered only 83–85 % of outcomes.
 - **The single networks only overtook the linear model at about 300 years.** The deep ensemble already did so at 150 years.
 - The state-dependent spread skill of the networks still rose from 0.37–0.40 at 70 years to about 0.55 at 1000 years.
@@ -84,6 +91,9 @@ All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md
 ## Part B: the same pipeline on real data
 
 The question carried over from Part A: a model trained in a climate model's world reports its own confidence. Is that confidence reliable on unseen members of the same model, and on the real world?
+
+![Region](results/figures/fig0_part_b_map.png)
+*(a) Predictors come from the tropical Pacific. Shown is the leading pattern of October SST anomalies in CESM2-LE (ENSO), with the Niño-3.4 box. (b) The target is January–March precipitation over the U.S. Southwest box (orange; roughly Arizona and New Mexico). There, observed winter precipitation correlates most strongly with the preceding October's Niño-3.4, the wet side of the classic El Niño north–south dipole.*
 
 | | |
 |---|---|
@@ -98,7 +108,7 @@ The processing steps are each unit-tested on small arrays (`tests/test_preproces
 
 ### Sanity checks on the processed data
 
-- The leading SST EOF explains 64 % of the October variance in CESM2-LE and tracks Niño-3.4 at r = 0.98 in the model and 0.96 in observations.
+- The leading SST EOF explains 63 % of the October variance in CESM2-LE and tracks Niño-3.4 at r = 0.98 in the model and 0.96 in observations.
 - October Niño-3.4 correlates with January–March Southwest precipitation at r = 0.44 in CESM2-LE and r = 0.34 in observations (1896–2025), so the model's teleconnection is somewhat stronger than observed.
 - Known events are reproduced: the 1982–83 and 1997–98 El Niños were followed by wet winters (target +1.2 and +1.1 σ), and the 2015–16 El Niño by the well-documented dry exception (−0.9 σ).
 
@@ -114,8 +124,12 @@ Samples: 1050 held-out CESM2-LE member-years and 130 observed years. Brackets ar
 | NN, SHASH | 0.121 [0.096, 0.144] | 0.073 [−0.015, 0.146] | 1.01 [0.87, 1.18] | −6 % [−10, 0] | −19 % [−29, −2] |
 | deep ensemble | 0.122 [0.096, 0.146] | 0.072 [−0.018, 0.151] | 1.01 [0.88, 1.17] | −6 % [−11, −1] | −21 % [−33, −4] |
 
-![Part B transfer](results/figures/fig9_part_b_transfer.png)
 ![Confident forecasts](results/figures/fig10_part_b_confidence.png)
+
+<details><summary>Skill and reliability by dataset (figure)</summary>
+
+![Part B transfer](results/figures/fig9_part_b_transfer.png)
+</details>
 
 Formal tests, Holm-corrected within each pre-defined family (full table: [`results/tables/significance.md`](results/tables/significance.md)):
 

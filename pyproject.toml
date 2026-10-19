@@ -44,8 +44,10 @@ data = [
   "cftime>=1.6",
   "requests>=2.31",
 ]
+# Map figure (fig. 0); coastlines and state boundaries from Natural Earth
+plot = ["cartopy>=0.22"]
 dev = ["pytest>=7.4", "ruff>=0.4", "pre-commit>=3.5"]
-all = ["knownpred[ml,data,dev]"]
+all = ["knownpred[ml,data,plot,dev]"]
 
 [project.scripts]
 knownpred = "knownpred.cli:main"

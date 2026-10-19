@@ -43,3 +43,24 @@ Everything in `results/` was produced by the commands above from the configurati
 - Observation files change as NOAA appends months. The SHA-256 checksums in `data/raw/MANIFEST.json` identify the exact versions used; to reproduce the published numbers exactly, the observation period in `configs/part_b.yaml` ends in 2025.
 - The map figure (fig. 0) uses cartopy with Natural Earth 1:50m coastlines, land, country and state boundaries (public domain; naturalearthdata.com). Cartopy downloads them on first use; where that server is blocked, the same files can be placed in cartopy's data directory from the GitHub mirror `nvkelso/natural-earth-vector`. The western-US correlation in panel b is computed once from the nClimGrid file (Jan–Mar means on a 0.25° grid) and cached in `runs/part_b/nclimgrid_nino34_corr.nc`.
 
+## Repository layout
+
+```
+configs/                 experiment configurations (all settings and seeds)
+src/knownpred/
+  simulate/system.py     toy system: recharge oscillator, precipitation, storage
+  truth.py               Monte Carlo ground truth
+  distributions.py       Gaussian and SHASH distributions (NumPy reference)
+  metrics.py             CRPS, PIT, spread-skill, discard curves, block bootstrap
+  stats_tests.py         Diebold-Mariano (HAC), circular-shift test, Holm / Benjamini-Hochberg
+  baselines.py           climatology, linear, two-stage gradient boosting
+  models/                PyTorch networks, losses, training, deep ensemble
+  attribution.py         permutation importance (models and truth), integrated gradients
+  evaluation.py          one scoring function for every model
+  data/                  Part B: sources registry, download, xarray preprocessing, samples
+  experiments/           Part A and Part B drivers, provenance and seeding
+  plotting.py            figures and tables in results/
+tests/                   unit, integration and end-to-end tests
+results/                 figures and tables (committed); large outputs stay in runs/
+docs/                    methods, data sources, reproducibility
+```

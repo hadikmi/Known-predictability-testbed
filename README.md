@@ -55,17 +55,25 @@ Part A uses no external data: every value comes from the toy system simulated in
 
 Raw data are not redistributed. The download scripts fetch them from the providers and record the URL, access date and SHA-256 checksum of every file. Each dataset keeps its provider's terms (NOAA open data; UCAR data terms; SMYLE CC BY 4.0). Use does not imply endorsement by NOAA or NCAR. Full citations, access points and processing notes: [docs/data.md](docs/data.md).
 
-## Quick start
+## Reproducing the results
+
+Requires Python ≥ 3.10. Everything runs on a CPU; the published results were produced on 2 cores and 8 GB RAM.
 
 ```bash
 pip install -e ".[all]"                          # or: conda env create -f environment.yml
-pytest -m "not slow"
-python -m knownpred.experiments.part_a           # Part A (~13 min on CPU)
-python -m knownpred.data.download                # Part B data
-python -m knownpred.experiments.part_b           # Part B
-python -m knownpred.experiments.significance     # formal tests
-python -m knownpred.plotting                     # figures and tables
+pytest -m "not slow"                             # tests, ~20 s
+python -m knownpred.experiments.part_a           # Part A, ~13 min
+python -m knownpred.data.download                # Part B data, ~20 min, ~50 GB streamed, 2.5 GB kept
+python -m knownpred.experiments.part_b           # Part B, ~2 min (SMYLE stage: --stage smyle)
+python -m knownpred.experiments.significance     # formal tests, ~10 s
+python -m knownpred.plotting                     # figures and tables, ~15 s
 ```
+
+- All settings and the master seed are in `configs/`; every random component derives its own seed from it, so reruns reproduce the published numbers exactly on CPU.
+- Each run writes `run_info.json` with the configuration checksum, git commit and package versions; downloads are logged with SHA-256 checksums in `data/raw/MANIFEST.json`.
+- To check the Part B pipeline without downloading anything: `python -m knownpred.experiments.part_b --fake-data` (~5 s).
+
+Details, including data-access notes: [docs/reproducibility.md](docs/reproducibility.md).
 
 ## Next steps
 

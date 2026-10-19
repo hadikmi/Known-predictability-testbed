@@ -118,6 +118,10 @@ class NetForecaster:
                 wait += 1
                 if wait >= c.patience:
                     break
+        if best_state is None:  # validation loss never finite: fail loudly, not silently
+            raise RuntimeError(
+                f"{self.name}: validation loss was never finite; check inputs and lr"
+            )
         self.model_.load_state_dict(best_state)
         self.best_val_nll_ = best
         self.n_epochs_ = len(self.history_["val"])

@@ -42,6 +42,19 @@ All figures, tables, formal tests and open questions: **[docs/results.md](docs/r
 
 Details: [methods](docs/methods.md) · [data sources and licences](docs/data.md) · [reproducibility and repository layout](docs/reproducibility.md)
 
+## Data sources
+
+Part A uses no external data: every value comes from the toy system simulated in this repository. Part B uses four public datasets:
+
+| Dataset | Provider | Role in this project | Reference |
+|---|---|---|---|
+| CESM2 Large Ensemble (CESM2-LE), 50 members, historical + SSP3-7.0 | NCAR / UCAR, via [AWS Open Data](https://registry.opendata.aws/ncar-cesm2-lens) | Training data: tropical Pacific surface temperature and Southwest precipitation | Rodgers et al. (2021), [doi:10.5194/esd-12-1393-2021](https://doi.org/10.5194/esd-12-1393-2021) |
+| ERSSTv5 sea surface temperature | NOAA PSL | Observed predictors | Huang et al. (2017), [doi:10.1175/JCLI-D-16-0836.1](https://doi.org/10.1175/JCLI-D-16-0836.1) |
+| nClimGrid monthly precipitation | NOAA NCEI | Observed target (Jan–Mar precipitation, U.S. Southwest) | Vose et al. (2014), [doi:10.7289/V5SX6B56](https://doi.org/10.7289/V5SX6B56) |
+| CESM2 SMYLE hindcasts, November starts, 20 members | NCAR, via [GDEX](https://doi.org/10.26024/PWMA-RE41) | Perfect-model reference for the real years (target winters 1971–2021) | Yeager et al. (2022), [doi:10.5194/gmd-15-6451-2022](https://doi.org/10.5194/gmd-15-6451-2022) |
+
+Raw data are not redistributed. The download scripts fetch them from the providers and record the URL, access date and SHA-256 checksum of every file. Each dataset keeps its provider's terms (NOAA open data; UCAR data terms; SMYLE CC BY 4.0). Use does not imply endorsement by NOAA or NCAR. Full citations, access points and processing notes: [docs/data.md](docs/data.md).
+
 ## Quick start
 
 ```bash

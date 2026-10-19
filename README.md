@@ -2,12 +2,17 @@
 
 [![CI](https://github.com/OWNER/known-predictability-testbed/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/known-predictability-testbed/actions/workflows/ci.yml)
 
+> **Status: initial release (v0.1), in active development.** The framework, the two case studies below and their statistical evaluation are complete and reproducible. Next steps, including more complex models, are listed under [Open questions and future work](#open-questions-and-future-work).
+
 Neural networks that predict a full distribution instead of a single value are increasingly used to find **forecasts of opportunity**: initial states from which the future is more predictable than usual (e.g. Mayer & Barnes, 2021; Gordon & Barnes, 2022). In climate-model or observational data the true predictability of each state is unknown. One can therefore check whether a network is calibrated on average, but not whether its "confident" cases are the ones that are actually predictable.
 
 This repository builds a small stochastic climate system in which the true forecast distribution can be computed for every state, and uses it to test uncertainty-aware models (Part A). It then applies the same pipeline to real data: training on the CESM2 Large Ensemble and evaluating on observations (Part B).
 
+![Region](results/figures/fig0_part_b_map.png)
+*Real-data case study (Part B). (a) Predictors come from the tropical Pacific: the leading pattern of October SST anomalies in CESM2-LE (ENSO, 63 % of variance), with the Niño-3.4 box. (b) The target is January–March precipitation over the U.S. Southwest box (orange; roughly Arizona and New Mexico). Observed winter precipitation there correlates most strongly with the preceding October's Niño-3.4: the wet side of the classic El Niño north–south dipole.*
+
 ![Predicted vs true spread](results/figures/fig2_sigma_vs_truth_lead3.png)
-*The core comparison this testbed makes possible. Each point is one test forecast (3-month lead): the spread a model predicted against the true spread of the system from that state. Linear regression can only vary its spread with the season (horizontal bands). Gradient boosting follows the truth loosely. The probabilistic networks follow it closely, but still only partly within each season (rank correlation 0.53–0.56).*
+*Testbed (Part A): the core comparison it makes possible. Each point is one test forecast (3-month lead): the spread a model predicted against the true spread of the system from that state. Linear regression can only vary its spread with the season (horizontal bands). Gradient boosting follows the truth loosely. The probabilistic networks follow it closely, but still only partly within each season (rank correlation 0.53–0.56).*
 
 **Key findings.**
 - **The testbed works.** With an exact truth for every forecast, it separates models that ordinary scores cannot. The networks recovered the true forecast spread far better than linear regression or gradient boosting, and beat linear regression at 1–3 month leads (Diebold–Mariano, Holm-adjusted p < 10⁻⁶).
@@ -90,8 +95,7 @@ All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md
 
 The question carried over from Part A: a model trained in a climate model's world reports its own confidence. Is that confidence reliable on unseen members of the same model, and on the real world?
 
-![Region](results/figures/fig0_part_b_map.png)
-*(a) Predictors come from the tropical Pacific. Shown is the leading pattern of October SST anomalies in CESM2-LE (ENSO), with the Niño-3.4 box. (b) The target is January–March precipitation over the U.S. Southwest box (orange; roughly Arizona and New Mexico). There, observed winter precipitation correlates most strongly with the preceding October's Niño-3.4, the wet side of the classic El Niño north–south dipole.*
+Predictor domain and target region: see the map at the top of this page.
 
 | | |
 |---|---|
@@ -165,7 +169,8 @@ Results that are not yet conclusive, each turned into a next step. All numbers a
    - In observations, the networks' most-confident half of years had 18–21 % smaller errors (unadjusted p = 0.008–0.033). This passes a 5 % false-discovery-rate control but not Holm's stricter family-wise control. In CESM2-LE the effect was smaller (−6 %).
    - Over 1971–2021 the networks' spread agreed only moderately with SMYLE's (Spearman 0.33–0.35, Holm-adjusted p ≥ 0.12). The SMYLE spread itself did not order the observed errors (p = 0.65).
    - *Question:* does the networks' spread capture a real feature, such as the bounded, skewed dry La Niña winters (observed skewness 1.1 vs 0.7 in CESM2-LE), or is this sampling variability? *Next:* a second initialised model (E3SMv2.1 SMYLE is in the same NCAR collection), longer hindcast sets, and more regions.
-7. **A richer testbed.** Make storage respond non-linearly (e.g. saturation), so that it truly affects predictability, and check whether attribution then finds it.
+7. **More complex models.** Every model enters the evaluation through the same `fit` / `predict` interface and returns a `Forecast` (`src/knownpred/forecast.py`). Larger architectures are therefore scored against the same exact truth and the same statistical tests without changes to the evaluation code: convolutional or U-Net models on full SST fields, or fine-tuned climate foundation models such as Vision Transformers. *Next:* add such a model on gridded predictors and test whether the extra complexity improves the within-season ranking of confidence (item 1).
+8. **A richer testbed.** Make storage respond non-linearly (e.g. saturation), so that it truly affects predictability, and check whether attribution then finds it.
 
 ## Repository layout
 

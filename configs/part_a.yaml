@@ -1,0 +1,74 @@
+# Part A: ground-truth testbed. All runs are reproducible from this file and
+# the master seed. Every random stream is derived from `seed` (see
+# knownpred.experiments.common.derive_seed), so changing one component does
+# not silently change the others.
+experiment: part_a
+seed: 2026
+output_dir: runs/part_a
+leads: [1, 3, 6]          # months
+
+data:
+  # Independent simulations (different seeds) for training, validation and
+  # testing: no shared trajectory, hence no leakage through autocorrelation.
+  train_years: 1000
+  val_years: 200
+  test_years: 500
+  spinup_years: 50
+
+truth:
+  n_members: 1000         # Monte Carlo continuations per test state
+
+system: {}                # overrides of knownpred.simulate.SystemParams
+
+models:
+  climatology: {}
+  linear: {}
+  boosting:
+    max_iter: 400
+    learning_rate: 0.05
+  nn_gaussian:            # requires PyTorch
+    family: gaussian
+    hidden: [64, 64]
+    lr: 0.001
+    batch_size: 256
+    max_epochs: 500
+    patience: 30
+  nn_shash:               # requires PyTorch
+    family: shash
+    hidden: [64, 64]
+    lr: 0.001
+    batch_size: 256
+    max_epochs: 500
+    patience: 30
+  deep_ensemble:          # requires PyTorch
+    n_members: 5
+    family: gaussian
+    hidden: [64, 64]
+    lr: 0.001
+    batch_size: 256
+    max_epochs: 500
+    patience: 30
+
+evaluation:
+  bootstrap_block_months: 24   # > decorrelation time of the target
+  bootstrap_samples: 1000
+  confident_fraction: 0.2
+
+attribution:
+  lead: 3
+  n_states: 1500
+  truth_members: 400
+  n_repeats: 3
+
+# Q4: does confidence stay honest when the system changes after training?
+shift_scenarios:
+  stronger_enso_noise: {sigma_T: 0.39}       # +30 % ENSO stochastic forcing
+  stronger_teleconnection: {beta0: 1.2}       # +50 % teleconnection strength
+  longer_storage_memory: {tau_S: 9.0}         # 6 -> 9 month reservoir memory
+shift_lead: 3
+
+# Q5: how many years of training data before spread estimates are useful?
+training_length:
+  lead: 3
+  years: [70, 150, 300, 1000]
+  repeats: 3

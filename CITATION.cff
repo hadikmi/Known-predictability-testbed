@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "knownpred: a ground-truth testbed for state-dependent predictability and uncertainty-aware neural networks"
+authors:
+  - family-names: Karimi
+    given-names: Hadi
+    affiliation: "Department of Geological and Environmental Sciences, Western Michigan University"
+version: 0.1.0
+date-released: 2026-10-18
+license: MIT
+keywords:
+  - predictability
+  - forecasts of opportunity
+  - uncertainty quantification
+  - explainable AI
+  - ENSO
+  - climate

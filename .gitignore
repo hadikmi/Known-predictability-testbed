@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Data: never committed. See data/README.md for how to obtain it.
+data/*
+!data/README.md
+
+# Run outputs: large arrays and checkpoints stay local; small figures/tables are committed.
+runs/
+*.pt
+*.npz
+*.nc
+*.zarr/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

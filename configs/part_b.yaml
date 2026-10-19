@@ -1,0 +1,51 @@
+# Part B: the Part A pipeline on real data.
+# Train on CESM2-LE internal variability, evaluate (i) on held-out CESM2-LE
+# members ("perfect-model" test) and (ii) on observations (ERSSTv5 + nClimGrid).
+experiment: part_b
+seed: 2026
+output_dir: runs/part_b
+
+paths:
+  raw: data/raw              # downloaded observation files (+ MANIFEST.json)
+  interim: data/interim      # regional CESM2-LE extracts
+  processed: data/processed  # sample tables used for training
+
+regions:                     # degrees north / degrees east (0-360)
+  sst_domain: {lat: [-30, 30], lon: [120, 290]}   # tropical Pacific, 120E-70W
+  nino34:     {lat: [-5, 5],   lon: [190, 240]}   # 170W-120W
+  target_box: {lat: [31, 37],  lon: [245, 257]}   # U.S. Southwest, 115W-103W
+
+cesm2:
+  forcing_variant: cmip6     # 50 members; 'smbb' is the other 50 (different biomass-burning forcing)
+  experiments: [historical, ssp370]
+  years: [1850, 2050]
+  precip_variables: [PRECC, PRECL]   # convective + large-scale = total
+  members: null              # null = all members; an integer limits it (for testing)
+
+observations:
+  years: [1895, 2025]
+  base_period: [1951, 2010]  # climatology and standardisation reference
+  forced_response: quadratic # polynomial degree-2 trend removed from each series
+
+season:
+  issue_month: 10            # predictors from October conditions
+  target_months: [1, 2, 3]   # January-March mean of the following year
+  antecedent_months: 3       # Aug-Oct regional precipitation
+  tendency_months: 3         # Nino-3.4(Oct) - Nino-3.4(Jul)
+  n_eofs: 6
+
+split:
+  fractions: [0.7, 0.15, 0.15]  # of CESM2-LE members
+
+models:
+  climatology: {}
+  linear: {}
+  boosting: {max_iter: 300, learning_rate: 0.05}
+  nn_gaussian: {family: gaussian, hidden: [32, 32], lr: 0.001, batch_size: 128, max_epochs: 500, patience: 30, weight_decay: 0.0001}
+  nn_shash:    {family: shash,    hidden: [32, 32], lr: 0.001, batch_size: 128, max_epochs: 500, patience: 30, weight_decay: 0.0001}
+  deep_ensemble: {n_members: 5, family: gaussian, hidden: [32, 32], lr: 0.001, batch_size: 128, max_epochs: 500, patience: 30, weight_decay: 0.0001}
+
+evaluation:
+  bootstrap_block_years: 5   # annual samples; blocks cover multi-year ENSO memory
+  bootstrap_samples: 2000
+  confident_fraction: 0.2

@@ -64,7 +64,7 @@ Questions arising from these results (details in [docs/results.md](docs/results.
 
 ## Relation to prior work
 
-Independent work building on published research on forecasts of opportunity and uncertainty-aware networks in the geosciences (Mayer & Barnes, 2021; Gordon & Barnes, 2022; Barnes, Barnes & Gordon, 2021; Mamalakis et al., 2022). All code was written from scratch from the published method descriptions. No affiliation with or endorsement by the cited authors or data providers is implied.
+Independent work building on published research on forecasts of opportunity and uncertainty-aware networks in the geosciences ([Mayer & Barnes, 2021](https://doi.org/10.1029/2020GL092092); [Gordon & Barnes, 2022](https://doi.org/10.1029/2022GL098635); [Barnes, Barnes & Gordillo, 2021](https://arxiv.org/abs/2109.07250); [Mamalakis et al., 2022](https://doi.org/10.1175/AIES-D-22-0012.1)). Full references: [docs/methods.md](docs/methods.md#references). All code was written from scratch from the published method descriptions. No affiliation with or endorsement by the cited authors or data providers is implied.
 
 ## Licence and citation
 

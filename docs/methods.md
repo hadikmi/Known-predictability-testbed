@@ -145,17 +145,20 @@ Truth-based metrics (testbed only):
 - Newey, W. K., & West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica*, 55, 703–708.
 - Yeager, S. G., et al. (2022). The Seasonal-to-Multiyear Large Ensemble (SMYLE) prediction system using the Community Earth System Model version 2. *Geosci. Model Dev.*, 15, 6451–6493.
 
+- Barnes, E. A., Barnes, R. J., & Gordillo, N. (2021). Adding uncertainty to neural network regression tasks in the geosciences. arXiv:2109.07250. https://arxiv.org/abs/2109.07250
 - Burgers, G., Jin, F.-F., & van Oldenborgh, G. J. (2005). The simplest ENSO recharge oscillator. *Geophys. Res. Lett.*, 32, L13706.
 - Davidian, M., & Carroll, R. J. (1987). Variance function estimation. *J. Amer. Stat. Assoc.*, 82, 1079–1091.
 - Ferro, C. A. T. (2014). Fair scores for ensemble forecasts. *Q. J. R. Meteorol. Soc.*, 140, 1917–1923.
 - Gneiting, T., & Raftery, A. E. (2007). Strictly proper scoring rules, prediction, and estimation. *J. Amer. Stat. Assoc.*, 102, 359–378.
 - Gneiting, T., Raftery, A. E., Westveld, A. H., & Goldman, T. (2005). Calibrated probabilistic forecasting using ensemble model output statistics and minimum CRPS estimation. *Mon. Wea. Rev.*, 133, 1098–1118.
-- Gordon, E. M., & Barnes, E. A. (2022). Incorporating uncertainty into a regression neural network enables identification of decadal state-dependent predictability in CESM2. *Geophys. Res. Lett.*
+- Gordon, E. M., & Barnes, E. A. (2022). Incorporating uncertainty into a regression neural network enables identification of decadal state-dependent predictability in CESM2. *Geophys. Res. Lett.*, 49(15). https://doi.org/10.1029/2022GL098635
 - Hamill, T. M. (2001). Interpretation of rank histograms for verifying ensemble forecasts. *Mon. Wea. Rev.*, 129, 550–560.
 - Jin, F.-F. (1997). An equatorial ocean recharge paradigm for ENSO. Part I: Conceptual model. *J. Atmos. Sci.*, 54, 811–829.
 - Jones, M. C., & Pewsey, A. (2009). Sinh-arcsinh distributions. *Biometrika*, 96, 761–780.
 - Lakshminarayanan, B., Pritzel, A., & Blundell, C. (2017). Simple and scalable predictive uncertainty estimation using deep ensembles. *NeurIPS 30*.
 - Levine, A. F. Z., & Jin, F.-F. (2010). Noise-induced instability in the ENSO recharge oscillator. *J. Atmos. Sci.*, 67, 529–542.
+- Mamalakis, A., Barnes, E. A., & Ebert-Uphoff, I. (2022). Investigating the fidelity of explainable artificial intelligence methods for applications of convolutional neural networks in geoscience. *Artif. Intell. Earth Syst.*, 1(4). https://doi.org/10.1175/AIES-D-22-0012.1
+- Mayer, K. J., & Barnes, E. A. (2021). Subseasonal forecasts of opportunity identified by an explainable neural network. *Geophys. Res. Lett.*, 48. https://doi.org/10.1029/2020GL092092
 - Nipen, T., & Stull, R. (2011). Calibrating probabilistic forecasts from an NWP ensemble. *Tellus A*, 63, 858–875.
 - Politis, D. N., & Romano, J. P. (1992). A circular block-resampling procedure for stationary data. In *Exploring the Limits of Bootstrap*, Wiley, 263–270.
 - Sundararajan, M., Taly, A., & Yan, Q. (2017). Axiomatic attribution for deep networks. *Proc. ICML*.

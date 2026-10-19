@@ -51,9 +51,18 @@ def cfg(tmp_path):
 def test_part_b_pipeline_runs_and_recovers_planted_teleconnection(cfg, tmp_path):
     from pathlib import Path
 
-    write_fake_inputs(
-        Path(cfg["paths"]["raw"]), Path(cfg["paths"]["interim"]), n_members=10, years=(1890, 1990)
-    )
+    import xarray as xr
+
+    from knownpred.data.download import months_needed
+
+    interim = Path(cfg["paths"]["interim"])
+    write_fake_inputs(Path(cfg["paths"]["raw"]), interim, n_members=10, years=(1890, 1990))
+    # The real extraction keeps only the months the analysis needs: mimic that.
+    for name, months in months_needed(cfg["season"]).items():
+        f = interim / f"cesm2le_cmip6_{name}.nc"
+        da = xr.open_dataarray(f).load()
+        da.close()
+        da.sel(time=da["time"].dt.month.isin(months)).to_netcdf(f)
     mod, obs = preprocess(cfg)
     assert set(mod["split"]) == {"train", "val", "test"}
     assert obs["year"].min() == 1896 and obs["year"].max() == 2000

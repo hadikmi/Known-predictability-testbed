@@ -23,7 +23,7 @@ from .sources import CESM2_LENS, ERSST_V5, NCLIMGRID, DataSource
 log = logging.getLogger(__name__)
 
 CESM2_CATALOG_JSON = (
-    "https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/data/aws-cesm2-le.json"
+    "https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/intake-catalogs/aws-cesm2-le.json"
 )
 
 
@@ -76,7 +76,16 @@ def fetch_source(src: DataSource, raw_dir: Path, filename: str) -> Path:
     for url in src.urls:
         try:
             log.info("downloading %s from %s", src.key, url)
-            download_file(url, dest)
+            for attempt in range(1, 11):  # resume after dropped connections
+                try:
+                    download_file(url, dest)
+                    break
+                except Exception as err:
+                    if attempt == 10:
+                        raise
+                    log.warning(
+                        "  attempt %d interrupted (%s); resuming", attempt, type(err).__name__
+                    )
             manifest[src.key] = {
                 "file": filename,
                 "url": url,
@@ -125,27 +134,71 @@ def find_store(
     return sel["path"].iloc[0]
 
 
+S3_HTTPS = "https://ncar-cesm2-lens.s3.us-west-2.amazonaws.com/"
+
+
+def https_path(path: str) -> str:
+    """Public S3 path -> HTTPS URL (works without AWS credentials or boto)."""
+    return path.replace("s3://ncar-cesm2-lens/", S3_HTTPS)
+
+
 def open_cesm2(variable: str, experiments, forcing_variant: str, catalog=None):
-    """Lazily open one CESM2-LE variable, concatenating experiments in time."""
+    """Lazily open one CESM2-LE variable, concatenating experiments in time.
+
+    The stores are read over HTTPS with ``trust_env=True`` so that standard
+    proxy settings (HTTPS_PROXY) are honoured.
+    """
     import xarray as xr
 
     catalog = catalog if catalog is not None else cesm2_catalog()
     parts = []
     for exp in experiments:
-        path = find_store(catalog, variable, exp, forcing_variant)
+        path = https_path(find_store(catalog, variable, exp, forcing_variant))
         log.info("opening %s", path)
-        parts.append(xr.open_zarr(path, consolidated=True, storage_options={"anon": True}))
+        parts.append(
+            xr.open_zarr(
+                path, consolidated=True, storage_options={"client_kwargs": {"trust_env": True}}
+            )
+        )
     ds = xr.concat(parts, dim="time", data_vars="minimal", coords="minimal", compat="override")
     return ds
 
 
+def months_needed(season: dict) -> dict[str, list[int]]:
+    """Calendar months each CESM2 variable is needed for (see data.dataset.build_samples).
+
+    SST: the issue month and the start of the Nino-3.4 tendency window.
+    Precipitation: the antecedent window and the target season.
+    Downloading only these months reduces the transfer roughly threefold.
+    """
+    issue = season["issue_month"]
+    earlier = (issue - season["tendency_months"] - 1) % 12 + 1
+    antecedent = [((issue - k - 1) % 12) + 1 for k in range(season["antecedent_months"])]
+    return {
+        "ts": sorted({issue, earlier}),
+        "precip": sorted(set(antecedent) | set(season["target_months"])),
+    }
+
+
 def extract_cesm2(cfg: dict, out_dir: Path) -> dict[str, Path]:
-    """Extract regional subsets of CESM2-LE TS and precipitation to netCDF."""
+    """Extract regional, month-subset CESM2-LE TS and precipitation to netCDF.
+
+    The Zarr chunks hold one member x 600 months x the full globe, so every
+    chunk in the requested period is downloaded in full; only the subset is
+    kept. Members are processed one at a time and saved to ``parts/`` so an
+    interrupted extraction resumes where it stopped and memory stays small.
+    """
+    import dask
+    import xarray as xr
+
     from .preprocess import fix_cesm_time, select_box, standardize_coords
 
     c = cfg["cesm2"]
+    months = months_needed(cfg["season"])
     catalog = cesm2_catalog()
     out_dir.mkdir(parents=True, exist_ok=True)
+    parts_dir = out_dir / "parts"
+    parts_dir.mkdir(exist_ok=True)
     paths = {}
     jobs = {
         "ts": (["TS"], cfg["regions"]["sst_domain"]),
@@ -157,23 +210,36 @@ def extract_cesm2(cfg: dict, out_dir: Path) -> dict[str, Path]:
             log.info("%s exists, skipping", dest.name)
             paths[name] = dest
             continue
-        da = None
+        lazy = {}
         for v in variables:
-            ds = open_cesm2(v, c["experiments"], c["forcing_variant"], catalog)
-            ds = fix_cesm_time(ds)
+            ds = fix_cesm_time(open_cesm2(v, c["experiments"], c["forcing_variant"], catalog))
             arr = standardize_coords(ds[v])
             arr = select_box(arr, box).sel(
                 time=slice(f"{c['years'][0]}-01-01", f"{c['years'][1]}-12-31")
             )
-            if c.get("members"):
-                arr = arr.isel(member_id=slice(0, c["members"]))
-            da = arr if da is None else da + arr  # PRECC + PRECL
+            lazy[v] = arr.sel(time=arr["time"].dt.month.isin(months[name]))
+        members = list(lazy[variables[0]]["member_id"].values)
+        if c.get("members"):
+            members = members[: c["members"]]
+        files = []
+        for i, m in enumerate(members):
+            f = parts_dir / f"{name}_{m}.nc"
+            if not f.exists():
+                with dask.config.set(scheduler="threads", num_workers=c.get("workers", 4)):
+                    sub = sum(lazy[v].sel(member_id=m) for v in variables).load()  # PRECC + PRECL
+                sub.name = name
+                sub.to_netcdf(f.with_suffix(".tmp"))
+                f.with_suffix(".tmp").rename(f)
+            files.append(f)
+            log.info("  %s member %d/%d (%s) done", name, i + 1, len(members), m)
+        da = xr.concat([xr.open_dataarray(f) for f in files], dim="member_id").load()
         da.name = name
+        da.attrs["units"] = lazy[variables[0]].attrs.get("units", "")
         da.attrs["source"] = (
             f"CESM2-LE {c['forcing_variant']} {'+'.join(variables)}; " + CESM2_LENS.citation
         )
-        log.info("computing %s subset %s", name, dict(da.sizes))
-        da.load().to_netcdf(dest)
+        da.to_netcdf(dest)
+        log.info("wrote %s %s", dest.name, dict(da.sizes))
         paths[name] = dest
     return paths
 

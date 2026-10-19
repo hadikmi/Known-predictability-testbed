@@ -236,7 +236,7 @@ def fig_attribution(run_dir: Path, out: Path):
     order = ["month", "T", "H", "S", "distractor_1", "distractor_2"]
     piv, err = piv.loc[order], err.loc[order]
     cols = [k for k in MODEL_STYLE if k in piv.columns]
-    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    fig, ax = plt.subplots(figsize=(7.6, 4.2))
     h = 0.8 / len(cols)
     y = np.arange(len(order))
     for i, k in enumerate(cols):
@@ -268,13 +268,14 @@ def fig_attribution(run_dir: Path, out: Path):
         "permutation importance of the predicted spread\n(mean |change in std| / mean std)"
     )
     ax.set_title("Which inputs drive the predicted spread? (3-month lead)", loc="left")
-    ax.legend(fontsize=8, loc="lower right")
+    ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.01, 1.0))
     ax.text(
-        0.99,
-        0.02 + 0.06 * len(cols),
-        "truth: S and distractors = 0 by construction",
+        1.02,
+        0.02,
+        "truth: S and\ndistractors = 0\nby construction",
         transform=ax.transAxes,
-        ha="right",
+        ha="left",
+        va="bottom",
         fontsize=7.5,
         color=INK2,
     )
@@ -451,7 +452,11 @@ def figs_part_b(run_dir: Path, out: Path, tables: Path):
     keys = [
         k
         for k in MODEL_STYLE
-        if MODEL_STYLE[k][0] in mm.index and k not in ("truth", "climatology")
+        if (
+            MODEL_STYLE[k][0] in mm.index
+            or MODEL_STYLE[k][0].replace("seasonal", "constant") in mm.index
+        )
+        and k not in ("truth", "climatology")
     ]
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.2), sharey=True)
     for ax, (col, lo, hi, xlab, ref) in zip(
@@ -501,6 +506,67 @@ def figs_part_b(run_dir: Path, out: Path, tables: Path):
     _save(fig, out / "fig9_part_b_transfer.png")
 
 
+def fig_part_b_confidence(run_dir: Path, out: Path, tables: Path, seed: int = 1):
+    """Error of the most-confident half vs all forecasts, with block-bootstrap CIs.
+
+    Also writes the numbers to results/tables/part_b_confidence.csv. A model
+    with constant spread (linear) has no meaningful ranking and serves as a
+    reference that should show no effect.
+    """
+    from .metrics import block_bootstrap_ci
+
+    keys = ["linear", "boosting", "nn_gaussian", "nn_shash", "deep_ensemble"]
+    rows = []
+    for name, label, block, sort_cols in (
+        ("cesm2le_test", "CESM2-LE test members", 5, ["member_id", "year"]),
+        ("observations", "observations", 5, ["year"]),
+    ):
+        f = run_dir / f"predictions_{name}.csv"
+        if not f.exists():
+            return
+        p = pd.read_csv(f).sort_values(sort_cols)
+        y = p["y"].to_numpy()
+        for k in keys:
+            mu, sd = p[f"{k}_mean"].to_numpy(), p[f"{k}_std"].to_numpy()
+
+            def stat(i, y=y, mu=mu, sd=sd):
+                e = np.abs(y[i] - mu[i])
+                half = np.argsort(sd[i], kind="stable")[: len(i) // 2]
+                return e[half].mean() / e.mean() - 1.0
+
+            ci = block_bootstrap_ci(stat, len(y), block, n_boot=2000, seed=seed)
+            rows.append({"dataset": label, "model": k, **ci})
+    df = pd.DataFrame(rows)
+    df.round(4).to_csv(tables / "part_b_confidence.csv", index=False)
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.4))
+    for j, k in enumerate(keys):
+        _, color, _ = MODEL_STYLE[k]
+        sub = df[df["model"] == k].reset_index(drop=True)
+        yy = np.arange(len(sub)) + (j - (len(keys) - 1) / 2) * 0.13
+        ax.scatter(
+            sub["estimate"] * 100,
+            yy,
+            color=color,
+            s=30,
+            zorder=3,
+            edgecolor="white",
+            lw=0.6,
+            label=SHORT[k],
+        )
+        ax.hlines(yy, sub["lower"] * 100, sub["upper"] * 100, color=color, lw=1)
+    ax.axvline(0, color=INK, lw=1, ls="--")
+    ax.set_yticks([0, 1], ["CESM2-LE\ntest members", "observations\n(130 years)"])
+    ax.invert_yaxis()
+    ax.set_xlabel(
+        "change in mean absolute error, most-confident half vs all forecasts (%)\n(95 % block-bootstrap CI; linear has constant spread, so no real ranking)"
+    )
+    ax.set_title("Do confident forecasts have smaller errors?", loc="left")
+    ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    fig.tight_layout()
+    _save(fig, out / "fig10_part_b_confidence.png")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--part-a", default="runs/part_a")
@@ -527,6 +593,7 @@ def main(argv=None):
         tables_part_a(a, tabs)
     if Path(args.part_b).exists():
         figs_part_b(Path(args.part_b), figs, tabs)
+        fig_part_b_confidence(Path(args.part_b), figs, tabs)
 
 
 if __name__ == "__main__":

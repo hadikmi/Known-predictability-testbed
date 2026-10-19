@@ -18,9 +18,10 @@ regions:                     # degrees north / degrees east (0-360)
 cesm2:
   forcing_variant: cmip6     # 50 members; 'smbb' is the other 50 (different biomass-burning forcing)
   experiments: [historical, ssp370]
-  years: [1850, 2050]
+  years: [1900, 2050]        # chunk-aligned: 1900-1949, 1950-1999, 2000-2014, 2015-2064
   precip_variables: [PRECC, PRECL]   # convective + large-scale = total
   members: null              # null = all members; an integer limits it (for testing)
+  workers: 4                 # parallel chunk downloads per member
 
 observations:
   years: [1895, 2025]

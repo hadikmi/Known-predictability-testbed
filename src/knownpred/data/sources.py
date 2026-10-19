@@ -69,7 +69,7 @@ CESM2_LENS = DataSource(
     role="Training data: surface temperature (TS) and precipitation, historical + SSP3-7.0, 50 members",
     urls=(
         "s3://ncar-cesm2-lens (anonymous access, us-west-2)",
-        "https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/data/aws-cesm2-le.json (intake-esm catalog)",
+        "https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/intake-catalogs/aws-cesm2-le.json (intake-esm catalog)",
     ),
     variable="TS, PRECC + PRECL (or PRECT)",
     terms="UCAR terms of use for data: https://www.ucar.edu/terms-of-use/data",

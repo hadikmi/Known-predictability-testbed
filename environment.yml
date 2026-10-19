@@ -15,9 +15,9 @@ dependencies:
   - xarray>=2023.6
   - netcdf4>=1.6
   - dask>=2023.6
-  - zarr>=2.16,<3
+  - zarr>=2.16
   - fsspec>=2023.6
-  - s3fs>=2023.6
+  - aiohttp>=3.9
   - cftime>=1.6
   - requests>=2.31
   - tabulate

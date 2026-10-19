@@ -124,7 +124,7 @@ def precip_to_mm_per_day(da: xr.DataArray) -> xr.DataArray:
         out = da * 86400.0
     elif u in ("mm/day", "mmday-1", "mm/d", "mmd-1"):
         out = da
-    elif u in ("mm", "millimeters", "millimetres", "mm/month"):
+    elif u in ("mm", "millimeter", "millimeters", "millimetre", "millimetres", "mm/month"):
         # monthly totals: divide by the number of days in each month
         out = da / da["time"].dt.days_in_month
     else:

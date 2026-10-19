@@ -22,7 +22,7 @@ Raw data are never committed. After download, `data/raw/MANIFEST.json` records t
 - nclimgrid: `https://www.ncei.noaa.gov/data/nclimgrid-monthly/access/nclimgrid_prcp.nc`
 - nclimgrid: `https://www.ncei.noaa.gov/pub/data/nidis/indices/nclimgrid-monthly/base-files/nclimgrid_prcp.nc`
 - cesm2lens: `s3://ncar-cesm2-lens (anonymous access, us-west-2)`
-- cesm2lens: `https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/data/aws-cesm2-le.json (intake-esm catalog)`
+- cesm2lens: `https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/intake-catalogs/aws-cesm2-le.json (intake-esm catalog)`
 
 ### Processing notes
 

@@ -1,0 +1,11 @@
+dataset,model,estimate,lower,upper,boot_std
+CESM2-LE test members,linear,0.0225,-0.0458,0.0451,0.0232
+CESM2-LE test members,boosting,-0.0542,-0.1008,-0.0022,0.0252
+CESM2-LE test members,nn_gaussian,-0.0575,-0.1025,-0.0068,0.025
+CESM2-LE test members,nn_shash,-0.058,-0.0995,-0.0045,0.0243
+CESM2-LE test members,deep_ensemble,-0.0608,-0.1054,-0.0146,0.0234
+observations,linear,-0.0191,-0.135,0.1348,0.0683
+observations,boosting,-0.0419,-0.1861,0.1242,0.0797
+observations,nn_gaussian,-0.1774,-0.3319,-0.0267,0.0769
+observations,nn_shash,-0.1893,-0.2853,-0.0218,0.0667
+observations,deep_ensemble,-0.2148,-0.3345,-0.0421,0.0731

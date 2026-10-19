@@ -29,41 +29,56 @@ Three coupled components, all monthly (full equations and parameters: [`docs/met
 
 The forecast models observe the full state (ENSO index, thermocline, storage, calendar month) and two irrelevant "distractor" series. The true forecast distribution for any test state is therefore obtained by running 1000 stochastic continuations from it. This makes some exact statements possible. For example, the true spread does not depend on current storage (storage shifts only the mean) or on the distractors. Real-world attribution studies have no such reference.
 
-## Results so far
+## Part A results
 
-> **Status.** The non-neural models below were run in full. The PyTorch models (Gaussian and SHASH networks, a deep ensemble) are implemented and tested but have **not been run yet**; their rows will be added after the first run on a GPU workstation. See [`docs/reproducibility.md`](docs/reproducibility.md). Part B has been verified only on synthetic stand-in files so far.
-
-Test set: 500 independent simulated years. Training: 1000 years. Lead: 3 months. Brackets are 95 % block-bootstrap intervals.
+Test set: 500 independent simulated years. Training: 1000 years. Lead: 3 months. Brackets are 95 % block-bootstrap intervals. All six models were run on CPU in 13 minutes ([`docs/reproducibility.md`](docs/reproducibility.md)).
 
 | Model | CRPSS vs climatology | Excess CRPS over truth (mm) | Spread rank corr. within month | Confident-set overlap (chance 0.20) | RMS log spread error | Mean error vs true mean (σ units) | PIT D | 90 % coverage |
 |---|---|---|---|---|---|---|---|---|
 | climatology | 0 | 14.70 [12.95, 16.46] | 0.00 | 0.20 | 0.91 | 2.19 | 0.007 | 0.877 |
 | linear, seasonal σ | 0.542 [0.512, 0.569] | 0.77 [0.64, 0.92] | 0.00 | 0.20 | 0.31 | 0.29 | 0.021 | 0.914 |
 | gradient boosting, two-stage | 0.534 [0.507, 0.560] | 0.96 [0.71, 1.25] | 0.47 | 0.50 | 0.23 | 0.45 | 0.021 | 0.918 |
+| NN, Gaussian | 0.558 [0.529, 0.585] | 0.37 [0.25, 0.50] | 0.53 | 0.56 | 0.11 | 0.28 | 0.020 | 0.899 |
+| NN, SHASH | 0.559 [0.529, 0.585] | 0.34 [0.21, 0.48] | 0.55 | 0.59 | 0.12 | 0.28 | 0.011 | 0.897 |
+| deep ensemble (5 × Gaussian NN) | 0.558 [0.529, 0.585] | 0.36 [0.24, 0.48] | 0.56 | 0.58 | 0.11 | 0.28 | 0.022 | 0.915 |
 | truth (ideal forecast) | 0.572 [0.541, 0.600] | 0 | 1 | 1 | 0 | 0 | 0.005 | 0.902 |
 
 All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md).
 
-**Observations from the baselines, and the questions they raise for the networks:**
-
-- **Outcome-based scores did not reveal which model captured the state-dependent spread.**
-  - The linear model has, by construction, no state-dependent spread. Yet it has slightly lower CRPS than gradient boosting, whose spread tracks the truth (within-month rank correlation 0.47 versus 0; RMS log spread error 0.23 versus 0.31).
-  - The difference comes from the mean: boosting's mean is further from the true mean (0.45 versus 0.29 σ).
-  - Both models have the same PIT deviation (0.021).
-  - So aggregate CRPS and PIT measured mostly the mean and the average spread. Can a network do well on both mean and spread at once, and would anything other than the truth-based metrics show it?
-- **Confidence was ranked better than chance, but far from the truth.** Boosting placed half of the truly most predictable 20 % of cases in its own most-confident 20 % (chance: 20 %). Its discard curve ([fig. 3](results/figures/fig3_discard_lead3.png)) lies below the linear model's for most retained fractions, and above the truth's.
-- **The spread attribution contained spurious contributions** ([fig. 5](results/figures/fig5_spread_attribution.png)).
-  - Boosting attributed 6–8 % relative spread changes each to storage and to both distractors, all exactly zero in the truth.
-  - Its attribution to the ENSO index (0.26) and to the calendar month (0.41) was close to the truth (0.27, 0.46).
-  - Would an attribution of a network's spread, with integrated gradients or permutation, contain fewer such contributions, or more?
-- **After the system changed, every trained model became overconfident** ([fig. 6](results/figures/fig6_distribution_shift.png)).
-  - With a 50 % stronger teleconnection, the spread–error ratio dropped to 0.79 for both models (truth: 1.04), and boosting's 90 % intervals covered 86 % of outcomes.
-  - This is the situation Part B tests with real data.
-- **Short records limited spread estimation more than mean estimation** ([fig. 7](results/figures/fig7_training_length.png)).
-  - With 70 years of training data, the within-month spread rank correlation of boosting fell to 0.20, and its excess CRPS (4.1 mm) was three times that of the linear model (1.3 mm). The two converged only at about 1000 years.
-  - Observational records are about 70–130 years long. Does a network's spread estimate degrade the same way, and does an ensemble help?
-
 ![Predicted vs true spread](results/figures/fig2_sigma_vs_truth_lead3.png)
+
+**Q1. Does the predicted spread follow the true spread?**
+- **The networks recovered the spread more closely than the other models.**
+  - Their spread error (RMS log 0.11–0.12) was half that of gradient boosting (0.23).
+  - Their gap to the ideal forecast's CRPS (0.34–0.37 mm) was half that of the linear model (0.77 mm), with non-overlapping intervals.
+- **Outcome-based scores alone barely separated the models.** The CRPSS intervals of all five trained models overlap, and the linear model, which has no state-dependent spread at all, ranks above gradient boosting on CRPSS. Only the comparison with the truth shows the differences in spread.
+- **Only the SHASH network matched the shape of the distribution.** Its PIT deviation (0.011) was half that of every other model (≈0.021), which fits it being the only model that can represent the skewed precipitation noise.
+- **The networks' advantage shrank at the 6-month lead.**
+  - Their excess CRPS (0.50–0.60 mm) overlapped the linear model's (0.55 mm), although their spread rank correlation rose to 0.68–0.75.
+  - At that lead the error of the mean dominates the score ([fig. 4](results/figures/fig4_metrics_by_lead.png)).
+
+**Q2. Are the most-confident forecasts the most predictable ones?**
+- Partly. The networks placed 56–59 % of the truly most predictable 20 % of cases in their own most-confident 20 % (chance: 20 %; boosting: 50 %).
+- The discard curves ([fig. 3](results/figures/fig3_discard_lead3.png)) lie between random ranking and the oracle ranking.
+
+**Q3. Does attribution of the spread find the true sources?** ([fig. 5](results/figures/fig5_spread_attribution.png))
+- **The large contributions were right.** Calendar month and the ENSO index were attributed at close to their true importance by every non-linear model (month 0.41–0.43 vs 0.46; ENSO 0.26–0.28 vs 0.27).
+- **Every non-linear model also attributed spread to inputs with exactly zero true importance.**
+  - Storage received 0.06–0.08, and the two distractors 0.03–0.07 each.
+  - The deep ensemble had the smallest distractor attributions (0.03–0.04) but not a smaller storage attribution (0.06).
+- Storage is correlated with the ENSO state in the training data, because it integrates ENSO-driven precipitation. Shuffling it therefore also creates combinations of inputs the models never saw. Whether the storage attribution reflects the models' use of storage as a stand-in for ENSO, or an artefact of permutation outside the data distribution, is a question for conditional attribution methods.
+
+**Q4. Does confidence stay reliable when the system changes?** ([fig. 6](results/figures/fig6_distribution_shift.png))
+- No. With a 50 % stronger teleconnection, every trained model became overconfident:
+  - spread–error ratio 0.78–0.81 (truth 1.04);
+  - networks' 90 % intervals covered 83–86 % of outcomes.
+- The networks were no better calibrated after the change than the linear model, although they were closer to the truth before it.
+
+**Q5. How much training data is needed?** ([fig. 7](results/figures/fig7_training_length.png))
+- **At 70 years the networks were worse than the linear model.** Their excess CRPS was 1.5–1.8 mm against 1.3 mm, and their 90 % intervals covered only 83–85 % of outcomes.
+- **The single networks only overtook the linear model at about 300 years.** The deep ensemble already did so at 150 years.
+- The state-dependent spread skill of the networks still rose from 0.37–0.40 at 70 years to about 0.55 at 1000 years.
+- Observational records are 70–130 years long, which falls in the range where the networks' confidence was least reliable here.
 
 ## Part B: the same pipeline on real data
 
@@ -71,7 +86,7 @@ The question carried over from Part A: a model trained in a climate model's worl
 
 | | |
 |---|---|
-| Training data | CESM2-LE, CMIP6 forcing variant, 50 members, historical + SSP3-7.0 (1850–2050); split by member 70/15/15 % |
+| Training data | CESM2-LE, CMIP6 forcing variant, 50 members, historical + SSP3-7.0 (1900–2050); split by member 70/15/15 % |
 | Observations | ERSSTv5 sea surface temperature; NOAA nClimGrid precipitation (1895–2025) |
 | Predictors (October) | first 6 EOFs of tropical Pacific SST anomalies (fitted on training members; observations projected onto them), Niño-3.4, its Jul–Oct tendency, Aug–Oct regional precipitation |
 | Target | January–March mean precipitation anomaly, U.S. Southwest (31–37°N, 115–103°W) |
@@ -79,6 +94,37 @@ The question carried over from Part A: a model trained in a climate model's worl
 | Reference forecast | leave-one-year-out observed climatology |
 
 The processing steps are each unit-tested on small arrays (`tests/test_preprocess.py`): CESM end-of-interval time stamps relabelled by month, unit conversion with month lengths, area weighting, periodic regridding, common masks and EOFs fitted only on training members. Data provenance (URL, access date, SHA-256) is written to `data/raw/MANIFEST.json`, and the licences and citations are in [`docs/data.md`](docs/data.md).
+
+### Sanity checks on the processed data
+
+- The leading SST EOF explains 64 % of the October variance in CESM2-LE and tracks Niño-3.4 at r = 0.98 in the model and 0.96 in observations.
+- October Niño-3.4 correlates with January–March Southwest precipitation at r = 0.44 in CESM2-LE and r = 0.34 in observations (1896–2025), so the model's teleconnection is somewhat stronger than observed.
+- Known events are reproduced: the 1982–83 and 1997–98 El Niños were followed by wet winters (target +1.2 and +1.1 σ), and the 2015–16 El Niño by the well-documented dry exception (−0.9 σ).
+
+### Part B results
+
+Samples: 1050 held-out CESM2-LE member-years and 130 observed years. Brackets are 95 % block-bootstrap intervals (5-year blocks). Full tables: [`results/tables/`](results/tables/).
+
+| Model | CRPSS, CESM2-LE test | CRPSS, observations | Spread/error ratio, observations | Error change, most-confident half, CESM2-LE | Error change, most-confident half, observations |
+|---|---|---|---|---|---|
+| linear, constant σ | 0.120 [0.094, 0.145] | 0.058 [−0.038, 0.143] | 0.99 [0.86, 1.15] | +2 % [−5, +5] | −2 % [−14, +13] |
+| gradient boosting | 0.113 [0.087, 0.137] | 0.085 [0.007, 0.156] | 1.09 [0.96, 1.25] | −5 % [−10, 0] | −4 % [−19, +12] |
+| NN, Gaussian | 0.123 [0.097, 0.147] | 0.078 [−0.011, 0.155] | 1.00 [0.87, 1.15] | −6 % [−10, −1] | −18 % [−33, −3] |
+| NN, SHASH | 0.121 [0.096, 0.144] | 0.073 [−0.015, 0.146] | 1.01 [0.87, 1.18] | −6 % [−10, 0] | −19 % [−29, −2] |
+| deep ensemble | 0.122 [0.096, 0.146] | 0.072 [−0.018, 0.151] | 1.01 [0.88, 1.17] | −6 % [−11, −1] | −21 % [−33, −4] |
+
+![Part B transfer](results/figures/fig9_part_b_transfer.png)
+![Confident forecasts](results/figures/fig10_part_b_confidence.png)
+
+- **Skill is modest, and in observations it cannot be separated from zero for most models.**
+  - In held-out CESM2-LE members all models gained about 12 % in CRPS over climatology, with no meaningful difference between them.
+  - In observations the point estimates were 6–9 %, and only gradient boosting's interval excluded zero.
+- **Average reliability carried over to observations within wide limits.** Every model's spread/error ratio in observations was compatible with 1, but the intervals span roughly ±15 %. With 130 years, the overconfidence seen in Part A after a change of system (ratio ≈0.8) could not be detected here.
+- **The networks learned a state-dependent spread that also ordered the real errors.**
+  - In all three networks the predicted spread rose with October Niño-3.4 (r = 0.68–0.85): wetter El Niño winters were forecast as more uncertain, drier La Niña winters as less.
+  - In observations, the networks' most-confident half of years had 18–21 % smaller errors than all years, with intervals excluding zero but only narrowly. The linear model, whose spread is constant and whose ranking is therefore arbitrary, showed no effect, as expected.
+- **The confidence effect was larger in observations than in the climate model** (−18 to −21 % versus −6 %). One possible explanation is that observed precipitation is more skewed (skewness 1.1 versus 0.7 in CESM2-LE): dry La Niña winters are bounded near zero rainfall and so vary less. Whether the networks' spread tracks this through ENSO alone, and whether the difference survives a longer or independent observational record, are open questions.
+
 
 ## Repository layout
 
@@ -130,7 +176,9 @@ The testbed adds an exact reference for the predictability of each state and for
 - The toy system is deliberately simple: 2 + 1 + 1 variables and linear dynamics apart from the noise. Results show how methods behave when the answer is known, not how they will behave in a high-dimensional climate model. They are also tied to the parameter choices in [`docs/methods.md`](docs/methods.md).
 - Truth-based metrics carry Monte Carlo error: about 2–3 % of each true σ with 1000 members.
 - Only one network architecture size is tested, and the hyperparameters were not tuned. A conclusion of the form "networks do or do not recover X" holds for this setup only.
-- In Part B, removing a quadratic trend from a single observed realisation is a crude estimate of the forced response. Standardising each dataset by its own statistics corrects variance bias but uses two statistics from part of the observed record. The observational evaluation has about 130 samples, so its confidence intervals are wide.
+- Each network configuration was trained once per experiment (one seed; the deep ensemble aside). Seed-to-seed spread is visible only in the training-length experiment (three repeats).
+- In Part B, removing a quadratic trend from a single observed realisation is a crude estimate of the forced response. Standardising each dataset by its own statistics corrects variance bias but uses two statistics (mean, standard deviation) from 1951–2010, which lies inside the evaluation period. The observational evaluation has 130 samples, so its confidence intervals are wide, and the Part B results come from one region, one season and one lead.
+- The observational test is not fully independent of model development: the region, season and predictors were chosen before seeing the results, but the well-known ENSO teleconnection to the Southwest is the reason they were chosen.
 
 ## Citation and licence
 

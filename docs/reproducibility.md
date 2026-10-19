@@ -16,22 +16,26 @@ Each random stream gets its own seed, derived from the master seed in the config
 
 ## Commands and run times
 
-| Step | Command | CPU time (2-core laptop-class VM) |
+Measured on the cloud VM where the published results were produced (2 CPU cores, 8 GB RAM, no GPU; PyTorch 2.14 CPU, xarray 2026.9, Python 3.13).
+
+| Step | Command | Time |
 |---|---|---|
-| Tests (fast) | `pytest -m "not slow"` | ~1.5 min |
-| Part A smoke test | `python -m knownpred.experiments.part_a --quick` | ~0.5 min (baselines) |
-| Part A full | `python -m knownpred.experiments.part_a` | 7 min for the non-neural models; the networks add one training per lead, scenario and training-length repeat (31 runs of each network type). Not yet timed: see the note below. |
-| Part B data | `python -m knownpred.data.download` | dominated by download bandwidth |
-| Part B | `python -m knownpred.experiments.part_b` | minutes |
-| Part B pipeline check | `python -m knownpred.experiments.part_b --fake-data` | ~5 s |
-| Figures and tables | `python -m knownpred.plotting` | ~10 s |
+| Tests (all, incl. network tests) | `pytest` | ~20 s (more when other jobs share the CPU) |
+| Part A smoke test | `python -m knownpred.experiments.part_a --quick` | ~0.5 min |
+| Part A full, all six models | `python -m knownpred.experiments.part_a` | 13 min |
+| Part B observations | `python -m knownpred.data.download --only obs` | ~1.5 min (1.96 GB) |
+| Part B CESM2-LE extraction | `python -m knownpred.data.download --only cesm2` | 16 min (~600 Zarr chunks of 80–110 MB; ~50 GB transferred, 0.54 GB kept) |
+| Part B preprocess + evaluate | `python -m knownpred.experiments.part_b` | 2 min |
+| Part B pipeline check without download | `python -m knownpred.experiments.part_b --fake-data` | ~5 s |
+| Figures and tables | `python -m knownpred.plotting` | ~15 s |
 
-## What has been run, and where
+## What has been run
 
-| Component | Status |
-|---|---|
-| Toy system, ground truth, metrics, non-neural baselines, attribution | run and tested; results in `results/` |
-| PyTorch models (Gaussian / SHASH networks, deep ensemble, integrated gradients) | written and covered by tests (`tests/test_torch.py`), but **not yet executed**: PyTorch could not be installed in the environment where the repository was built. The first run happens on the author's workstation. The neural-network rows of `results/tables/part_a_metrics.csv` appear after that run. |
-| Part B real-data pipeline | every step verified end to end on synthetic stand-in files with the real structure (`tests/test_part_b_pipeline.py`, `--fake-data`). Not yet run on the real CESM2-LE / ERSSTv5 / nClimGrid files. |
+Everything in `results/` was produced by the commands above from the configurations in `configs/`. The `run_info*.json` files in `runs/` record the git commit, configuration checksum and package versions of each run.
 
-This table is updated as each component is run.
+## Data access notes
+
+- CESM2-LE is read over HTTPS from `https://ncar-cesm2-lens.s3.us-west-2.amazonaws.com/` (no AWS credentials or `s3fs` needed). The intake-esm catalog lives at `https://raw.githubusercontent.com/NCAR/cesm2-le-aws/main/intake-catalogs/aws-cesm2-le.json`.
+- The Zarr chunks hold one member × 600 months × the full globe, so the transfer volume is set by the period and the number of members, not by the region or months kept. The configured period (1900–2050) is aligned to chunk boundaries.
+- Behind a proxy, the HTTPS reader uses the standard `HTTPS_PROXY` variable (`trust_env=True`). Observation downloads resume after dropped connections (up to 10 attempts).
+- Observation files change as NOAA appends months. The SHA-256 checksums in `data/raw/MANIFEST.json` identify the exact versions used; to reproduce the published numbers exactly, the observation period in `configs/part_b.yaml` ends in 2025.

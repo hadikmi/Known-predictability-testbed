@@ -106,7 +106,7 @@ Truth-based metrics (testbed only):
 
 ## 5. Part B pipeline
 
-1. **Extract.** CESM2-LE `TS` and `PRECC + PRECL` (historical + SSP3-7.0, CMIP6 forcing variant) are read lazily from the public Zarr stores. Only the tropical Pacific domain (TS) and the U.S. Southwest box (precipitation) are kept. Monthly time stamps, which CESM places at the end of the averaging interval, are relabelled by month (`fix_cesm_time`).
+1. **Extract.** CESM2-LE `TS` and `PRECC + PRECL` (historical + SSP3-7.0, CMIP6 forcing variant, 1900–2050, all 50 members) are read over HTTPS from the public Zarr stores on AWS. Only the tropical Pacific domain (TS), the U.S. Southwest box (precipitation) and the calendar months the analysis uses are kept. The stores are chunked as one member × 600 months × the full globe, so whole chunks (about 600 of 80–110 MB each) are transferred even though only a small subset is kept. Months are labelled from the midpoint of `time_bnds` (`fix_cesm_time`), which is robust to the end-of-interval time stamps of raw CESM output.
 2. **Observations.**
    - ERSSTv5 is regridded bilinearly from its 2° grid to the ~1° CESM grid, with longitudes padded periodically.
    - A common ocean mask is applied to model and observations.

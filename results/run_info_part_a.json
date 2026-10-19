@@ -1,0 +1,119 @@
+{
+  "provenance": {
+    "knownpred_version": "0.1.0",
+    "git_commit": "77b25f23d028ad7ee46d9fea01f2c11d2d2a5f44",
+    "git_dirty": false,
+    "timestamp_utc": "2026-10-18T15:56:08+00:00",
+    "python": "3.13.16",
+    "platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+    "packages": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.5",
+      "sklearn": "1.9.1",
+      "matplotlib": "3.11.2",
+      "torch": "2.14.1+cu130",
+      "xarray": "2026.9.0"
+    },
+    "config_path": "configs/part_a.yaml",
+    "config_sha256": "93ecb79180262c6f63592ee293a3311de0e0e346cefacc626a7652612b9b850c",
+    "torch_models_run": true
+  },
+  "config": {
+    "experiment": "part_a",
+    "seed": 2026,
+    "output_dir": "runs/part_a",
+    "leads": [
+      1,
+      3,
+      6
+    ],
+    "data": {
+      "train_years": 1000,
+      "val_years": 200,
+      "test_years": 500,
+      "spinup_years": 50
+    },
+    "truth": {
+      "n_members": 1000
+    },
+    "system": {},
+    "models": {
+      "climatology": {},
+      "linear": {},
+      "boosting": {
+        "max_iter": 400,
+        "learning_rate": 0.05
+      },
+      "nn_gaussian": {
+        "family": "gaussian",
+        "hidden": [
+          64,
+          64
+        ],
+        "lr": 0.001,
+        "batch_size": 256,
+        "max_epochs": 500,
+        "patience": 30
+      },
+      "nn_shash": {
+        "family": "shash",
+        "hidden": [
+          64,
+          64
+        ],
+        "lr": 0.001,
+        "batch_size": 256,
+        "max_epochs": 500,
+        "patience": 30
+      },
+      "deep_ensemble": {
+        "n_members": 5,
+        "family": "gaussian",
+        "hidden": [
+          64,
+          64
+        ],
+        "lr": 0.001,
+        "batch_size": 256,
+        "max_epochs": 500,
+        "patience": 30
+      }
+    },
+    "evaluation": {
+      "bootstrap_block_months": 24,
+      "bootstrap_samples": 1000,
+      "confident_fraction": 0.2
+    },
+    "attribution": {
+      "lead": 3,
+      "n_states": 1500,
+      "truth_members": 400,
+      "n_repeats": 3
+    },
+    "shift_scenarios": {
+      "stronger_enso_noise": {
+        "sigma_T": 0.39
+      },
+      "stronger_teleconnection": {
+        "beta0": 1.2
+      },
+      "longer_storage_memory": {
+        "tau_S": 9.0
+      }
+    },
+    "shift_lead": 3,
+    "training_length": {
+      "lead": 3,
+      "years": [
+        70,
+        150,
+        300,
+        1000
+      ],
+      "repeats": 3
+    },
+    "_config_path": "configs/part_a.yaml",
+    "_config_sha256": "93ecb79180262c6f63592ee293a3311de0e0e346cefacc626a7652612b9b850c"
+  }
+}

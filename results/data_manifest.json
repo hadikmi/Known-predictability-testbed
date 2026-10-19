@@ -1,0 +1,16 @@
+{
+  "ersstv5": {
+    "file": "ersstv5_sst.mnmean.nc",
+    "url": "https://psl.noaa.gov/thredds/fileServer/Datasets/noaa.ersst.v5/sst.mnmean.nc",
+    "sha256": "56659057862e8e064365d0c695570a4512937d5ebbf744f4af3f47699c267e81",
+    "bytes": 160754608,
+    "accessed": "2026-10-18"
+  },
+  "nclimgrid": {
+    "file": "nclimgrid_prcp.nc",
+    "url": "https://www.ncei.noaa.gov/data/nclimgrid-monthly/access/nclimgrid_prcp.nc",
+    "sha256": "1d9f6cb28dd8ed203ed512ad9083f5a5252dedd85ac58cf155a33582b36459fb",
+    "bytes": 1798084265,
+    "accessed": "2026-10-18"
+  }
+}

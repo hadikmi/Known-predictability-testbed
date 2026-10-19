@@ -1,0 +1,162 @@
+{
+  "provenance": {
+    "knownpred_version": "0.1.0",
+    "git_commit": "77b25f23d028ad7ee46d9fea01f2c11d2d2a5f44",
+    "git_dirty": true,
+    "timestamp_utc": "2026-10-18T16:23:19+00:00",
+    "python": "3.13.16",
+    "platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+    "packages": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.5",
+      "sklearn": "1.9.1",
+      "matplotlib": "3.11.2",
+      "torch": "2.14.1+cu130",
+      "xarray": "2026.9.0"
+    },
+    "config_path": "configs/part_b.yaml",
+    "config_sha256": "4c21e126e5efc4da59146fb65f327c25a913d74ad6905721201fe3624a589a95",
+    "torch_models_run": true
+  },
+  "config": {
+    "experiment": "part_b",
+    "seed": 2026,
+    "output_dir": "runs/part_b",
+    "paths": {
+      "raw": "data/raw",
+      "interim": "data/interim",
+      "processed": "data/processed"
+    },
+    "regions": {
+      "sst_domain": {
+        "lat": [
+          -30,
+          30
+        ],
+        "lon": [
+          120,
+          290
+        ]
+      },
+      "nino34": {
+        "lat": [
+          -5,
+          5
+        ],
+        "lon": [
+          190,
+          240
+        ]
+      },
+      "target_box": {
+        "lat": [
+          31,
+          37
+        ],
+        "lon": [
+          245,
+          257
+        ]
+      }
+    },
+    "cesm2": {
+      "forcing_variant": "cmip6",
+      "experiments": [
+        "historical",
+        "ssp370"
+      ],
+      "years": [
+        1900,
+        2050
+      ],
+      "precip_variables": [
+        "PRECC",
+        "PRECL"
+      ],
+      "members": null,
+      "workers": 4
+    },
+    "observations": {
+      "years": [
+        1895,
+        2025
+      ],
+      "base_period": [
+        1951,
+        2010
+      ],
+      "forced_response": "quadratic"
+    },
+    "season": {
+      "issue_month": 10,
+      "target_months": [
+        1,
+        2,
+        3
+      ],
+      "antecedent_months": 3,
+      "tendency_months": 3,
+      "n_eofs": 6
+    },
+    "split": {
+      "fractions": [
+        0.7,
+        0.15,
+        0.15
+      ]
+    },
+    "models": {
+      "climatology": {},
+      "linear": {},
+      "boosting": {
+        "max_iter": 300,
+        "learning_rate": 0.05
+      },
+      "nn_gaussian": {
+        "family": "gaussian",
+        "hidden": [
+          32,
+          32
+        ],
+        "lr": 0.001,
+        "batch_size": 128,
+        "max_epochs": 500,
+        "patience": 30,
+        "weight_decay": 0.0001
+      },
+      "nn_shash": {
+        "family": "shash",
+        "hidden": [
+          32,
+          32
+        ],
+        "lr": 0.001,
+        "batch_size": 128,
+        "max_epochs": 500,
+        "patience": 30,
+        "weight_decay": 0.0001
+      },
+      "deep_ensemble": {
+        "n_members": 5,
+        "family": "gaussian",
+        "hidden": [
+          32,
+          32
+        ],
+        "lr": 0.001,
+        "batch_size": 128,
+        "max_epochs": 500,
+        "patience": 30,
+        "weight_decay": 0.0001
+      }
+    },
+    "evaluation": {
+      "bootstrap_block_years": 5,
+      "bootstrap_samples": 2000,
+      "confident_fraction": 0.2
+    },
+    "_config_path": "configs/part_b.yaml",
+    "_config_sha256": "4c21e126e5efc4da59146fb65f327c25a913d74ad6905721201fe3624a589a95"
+  }
+}

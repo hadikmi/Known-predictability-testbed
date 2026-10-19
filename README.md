@@ -1,6 +1,6 @@
 # knownpred: testing uncertainty-aware forecasts where the predictability is known
 
-[![CI](https://github.com/OWNER/known-predictability-testbed/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/known-predictability-testbed/actions/workflows/ci.yml)
+[![CI](https://github.com/hadikmi/known-predictability-testbed/actions/workflows/ci.yml/badge.svg)](https://github.com/hadikmi/known-predictability-testbed/actions/workflows/ci.yml)
 
 > **Status: initial release (v0.1), in active development.** The framework, the two case studies below and their statistical evaluation are complete and reproducible. Next steps, including more complex models, are listed under [Open questions and future work](#open-questions-and-future-work).
 

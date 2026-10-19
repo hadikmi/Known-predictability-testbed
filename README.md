@@ -143,10 +143,37 @@ The tests (family `B-smyle` in `significance.py`):
 2. Does the SMYLE spread itself order the observed errors?
 3. Is SMYLE better than climatology?
 
-Code and tests are in place (`knownpred.data.smyle`, `tests/test_smyle.py`). Run with:
+Data: the November-start SMYLE precipitation collection (NCAR GDEX dataset d010074, CC BY 4.0), 51 start years × 20 members, regional January–March means over the same box, drift-corrected, trend-removed and standardised like the observations. Observed target years 1971–2021 (n = 51).
+
+![SMYLE](results/figures/fig11_part_b_smyle.png)
+
+**Sanity checks.**
+- The SMYLE ensemble mean correlates with the observed target at r = 0.45, and with October Niño-3.4 at r = 0.73.
+- Its spread/error ratio against observations is 0.97, so the 20-member ensemble is about as wide as its errors.
+- The SMYLE spread is itself larger in El Niño years (r = 0.37 with Niño-3.4), the same direction as the networks' spread.
+
+**Pre-defined tests (family `B-smyle`, Holm-corrected).**
+
+| Question | Result |
+|---|---|
+| Does each model's spread rank the years like SMYLE's spread? (Spearman, circular shift) | networks ρ = 0.33–0.35 (unadjusted p = 0.02–0.05), gradient boosting ρ = 0.19 (p = 0.09); none significant after Holm (adjusted p ≥ 0.12) |
+| Does the SMYLE spread order the observed errors of the SMYLE mean? | no: +5 % error change, p = 0.65 |
+| Is SMYLE better than climatology? (Diebold–Mariano) | yes: CRPS 0.51 vs 0.61, Holm-adjusted p = 0.022 |
+
+For reference, the expected Spearman correlation between the true spread and a 20-member estimate of it is about 0.82. So the 0.33–0.35 found here sits well below what sampling noise in SMYLE alone would allow; the networks' spreads are not mainly a noisy copy of SMYLE's.
+
+**Exploratory comparisons on the same 51 years** (not part of a corrected family; [`results/tables/part_b_smyle_exploratory.csv`](results/tables/part_b_smyle_exploratory.csv)):
+- **Skill:** the statistical models trained only on the uninitialised CESM2-LE had the same CRPS as SMYLE: 0.48–0.49 against 0.51, with no paired difference near significance (p = 0.42–0.63).
+- **Confidence:** over these years, the networks' own most-confident half again had 22–25 % smaller errors (p = 0.047: only one of the 42 shifted alignments gave an effect as large).
+
+**Questions these results raise.**
+- The networks' spread agrees only moderately with the perfect-model spread from the full initial state. Yet in the observed record it orders the real errors at least as well as the SMYLE spread does (the SMYLE spread shows no ordering at all). Is the networks' spread capturing something about the real precipitation distribution that SMYLE's 20 members do not, such as the bounded, skewed dry La Niña winters? Or is this sampling variability in 51 years?
+- A longer hindcast set, or a second initialised model (the same NCAR collection holds E3SMv2.1 SMYLE), would help separate the two.
+
+Run with:
 
 ```bash
-python -m knownpred.experiments.part_b --stage smyle      # needs access to thredds.rda.ucar.edu
+python -m knownpred.experiments.part_b --stage smyle   # reads the needed chunks from thredds.rda.ucar.edu
 python -m knownpred.experiments.significance
 ```
 
@@ -204,6 +231,7 @@ The testbed adds an exact reference for the predictability of each state and for
 - Only one network architecture size is tested, and the hyperparameters were not tuned. A conclusion of the form "networks do or do not recover X" holds for this setup only.
 - Each network configuration was trained once per experiment (one seed; the deep ensemble aside). Seed-to-seed spread is visible only in the training-length experiment (three repeats).
 - In Part B, removing a quadratic trend from a single observed realisation is a crude estimate of the forced response. Standardising each dataset by its own statistics corrects variance bias but uses two statistics (mean, standard deviation) from 1951–2010, which lies inside the evaluation period. The observational evaluation has 130 samples, so its confidence intervals are wide, and the Part B results come from one region, one season and one lead.
+- The SMYLE comparison covers 51 years and one model; SMYLE's 20-member spread carries ~16 % sampling error per year, and its truth is CESM2's, not the real climate system's.
 - The observational test is not fully independent of model development: the region, season and predictors were chosen before seeing the results, but the well-known ENSO teleconnection to the Southwest is the reason they were chosen.
 
 ## Citation and licence

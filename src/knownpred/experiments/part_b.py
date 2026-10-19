@@ -258,7 +258,7 @@ def smyle_stage(cfg: dict) -> pd.DataFrame:
     out = Path(cfg["output_dir"])
     gt = smyle.build(
         cfg,
-        var=cfg.get("smyle", {}).get("variable", "PRECT"),
+        var=cfg.get("smyle", {}).get("variable", "PRE"),
         local_dir=Path(cfg["paths"]["raw"]) / "smyle",
     )
     gt.to_csv(out / "smyle_truth.csv", index=False)

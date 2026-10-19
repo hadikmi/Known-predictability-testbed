@@ -26,6 +26,8 @@ Measured on the cloud VM where the published results were produced (2 CPU cores,
 | Part B observations | `python -m knownpred.data.download --only obs` | ~1.5 min (1.96 GB) |
 | Part B CESM2-LE extraction | `python -m knownpred.data.download --only cesm2` | 16 min (~600 Zarr chunks of 80–110 MB; ~50 GB transferred, 0.54 GB kept) |
 | Part B preprocess + evaluate | `python -m knownpred.experiments.part_b` | 2 min |
+| Part B SMYLE truth | `python -m knownpred.experiments.part_b --stage smyle` | ~30 min through a slow, intermittently failing server (range reads with retries); minutes on a good link |
+| Significance tests | `python -m knownpred.experiments.significance` | ~10 s |
 | Part B pipeline check without download | `python -m knownpred.experiments.part_b --fake-data` | ~5 s |
 | Figures and tables | `python -m knownpred.plotting` | ~15 s |
 

@@ -1,0 +1,8 @@
+model,crps,spread_error_ratio,smyle_minus_model_crps,p_two_sided_vs_smyle,confident_half_error_change,p_confident_half
+"SMYLE (initialised, 20 members)",0.5091,0.9697,,,,
+linear,0.4897,0.9932,0.0194,0.5455,,
+boosting,0.4839,1.0622,0.0252,0.4589,-0.104,0.186
+NN Gaussian,0.4939,0.9772,0.0151,0.6271,-0.2398,0.0465
+NN SHASH,0.4872,1.0151,0.0219,0.4242,-0.2531,0.0465
+deep ensemble,0.4884,1.0126,0.0207,0.4925,-0.2153,0.0465
+climatology (leave-one-out),0.6098,,,,,

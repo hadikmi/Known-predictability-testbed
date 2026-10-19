@@ -567,6 +567,100 @@ def fig_part_b_confidence(run_dir: Path, out: Path, tables: Path, seed: int = 1)
     _save(fig, out / "fig10_part_b_confidence.png")
 
 
+def fig_smyle(run_dir: Path, out: Path, tables: Path):
+    """Part B with the CESM2 SMYLE perfect-model truth, observed years 1971-2021.
+
+    Panel a: SMYLE 20-member ensemble per target year (box: interquartile,
+    whiskers: range) with the observed value. Panel b: predicted spread of
+    the deep ensemble vs the SMYLE ensemble spread. Also writes an
+    exploratory table (not part of the pre-defined test families).
+    """
+    from .metrics import crps_ensemble, spread_error_ratio
+    from .stats_tests import circular_shift_test, confident_half_error_change, diebold_mariano
+
+    f_truth, f_obs = run_dir / "smyle_truth.csv", run_dir / "predictions_observations.csv"
+    if not (f_truth.exists() and f_obs.exists()):
+        return
+    g = pd.read_csv(f_truth).set_index("target_year")
+    p = pd.read_csv(f_obs).set_index("year")
+    years = sorted(set(g.index) & set(p.index))
+    g, p = g.loc[years], p.loc[years]
+    mem = g.filter(regex=r"^m\d+$").to_numpy()
+    y = p["y"].to_numpy()
+
+    crps_s = crps_ensemble(y, mem, fair=True)
+    rows = [
+        {
+            "model": "SMYLE (initialised, 20 members)",
+            "crps": crps_s.mean(),
+            "spread_error_ratio": spread_error_ratio(y, mem.mean(1), mem.std(1, ddof=1)),
+        }
+    ]
+    for k in ["linear", "boosting", "nn_gaussian", "nn_shash", "deep_ensemble"]:
+        r = diebold_mariano(crps_s, p[f"{k}_crps"].to_numpy())
+        row = {
+            "model": SHORT[k],
+            "crps": p[f"{k}_crps"].mean(),
+            "spread_error_ratio": spread_error_ratio(y, p[f"{k}_mean"], p[f"{k}_std"]),
+            "smyle_minus_model_crps": r["mean_diff"],
+            "p_two_sided_vs_smyle": r["p_two_sided"],
+        }
+        if k != "linear":
+            e = np.abs(y - p[f"{k}_mean"].to_numpy())
+            c = circular_shift_test(
+                confident_half_error_change, p[f"{k}_std"].to_numpy(), e, min_shift=5
+            )
+            row.update(
+                {"confident_half_error_change": c["statistic"], "p_confident_half": c["p_value"]}
+            )
+        rows.append(row)
+    rows.append({"model": "climatology (leave-one-out)", "crps": p["climatology_loo_crps"].mean()})
+    tab = pd.DataFrame(rows)
+    tab.round(4).to_csv(tables / "part_b_smyle_exploratory.csv", index=False)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 3.6), gridspec_kw={"width_ratios": [2.2, 1]})
+    ax = axes[0]
+    ax.boxplot(
+        mem.T,
+        positions=years,
+        widths=0.6,
+        whis=(0, 100),
+        showfliers=False,
+        patch_artist=True,
+        boxprops={"facecolor": GRID, "edgecolor": MUTED, "linewidth": 0.8},
+        medianprops={"color": INK2, "linewidth": 1},
+        whiskerprops={"color": MUTED, "linewidth": 0.8},
+        capprops={"color": MUTED, "linewidth": 0.8},
+    )
+    ax.scatter(years, y, color="#eb6834", s=16, zorder=3, label="observed (nClimGrid)")
+    ax.set_xticks(years[::5], [str(v) for v in years[::5]])
+    ax.set_xlabel("target year (January-March)")
+    ax.set_ylabel("standardised precipitation anomaly")
+    ax.set_title("a  CESM2 SMYLE: 20 members from the observed 1 November state", loc="left")
+    ax.legend(loc="upper right", fontsize=8)
+    ax = axes[1]
+    k = "deep_ensemble"
+    sd = p[f"{k}_std"] / p[f"{k}_std"].mean()
+    ax.errorbar(
+        g["smyle_std"],
+        sd,
+        xerr=g["smyle_std_se"],
+        fmt="o",
+        ms=4,
+        color=MODEL_STYLE[k][1],
+        ecolor=GRID,
+        elinewidth=1,
+    )
+    from scipy import stats as _st
+
+    rho = _st.spearmanr(sd, g["smyle_std"]).statistic
+    ax.set_xlabel("SMYLE ensemble spread (standardised; bars: sampling s.e.)")
+    ax.set_ylabel("deep-ensemble spread / its mean")
+    ax.set_title(f"b  Spread per year (Spearman {rho:.2f})", loc="left")
+    fig.tight_layout()
+    _save(fig, out / "fig11_part_b_smyle.png")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--part-a", default="runs/part_a")
@@ -594,6 +688,7 @@ def main(argv=None):
     if Path(args.part_b).exists():
         figs_part_b(Path(args.part_b), figs, tabs)
         fig_part_b_confidence(Path(args.part_b), figs, tabs)
+        fig_smyle(Path(args.part_b), figs, tabs)
 
 
 if __name__ == "__main__":

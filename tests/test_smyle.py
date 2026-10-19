@@ -13,12 +13,12 @@ from knownpred.data import smyle  # noqa: E402
 @pytest.fixture(scope="module")
 def fake(tmp_path_factory):
     d = tmp_path_factory.mktemp("smyle")
-    smyle.write_fake_smyle(d / smyle.SMYLE_FILE.format(var="PRECT"))
+    smyle.write_fake_smyle(d / smyle.SMYLE_FILE.format(var="PRE"))
     return d
 
 
 def test_target_leads_are_jan_to_mar_after_november_start(fake):
-    ds = smyle.open_smyle("PRECT", fake)
+    ds = smyle.open_smyle("PRE", fake)
     np.testing.assert_array_equal(smyle.target_leads(ds, [1, 2, 3]), [2, 3, 4])
 
 
@@ -28,13 +28,13 @@ def test_ground_truth_recovers_planted_spread(fake):
         "season": {"target_months": [1, 2, 3]},
         "observations": {"forced_response": "quadratic"},
     }
-    gt = smyle.build(cfg, "PRECT", local_dir=fake)
+    gt = smyle.build(cfg, "PRE", local_dir=fake)
     assert list(gt["target_year"])[:2] == [1971, 1972]
     assert (gt["members"] == 20).all()
     # standardised: all-members variance ~1
     m = gt.filter(regex=r"^m\d+$").to_numpy()
     assert np.nanstd(m) == pytest.approx(1.0, rel=1e-6)
-    planted = pd.read_csv(fake / "CESM2-SMYLE_NOV.PRECT.1970-2020.enso.csv", index_col=0).iloc[:, 0]
+    planted = pd.read_csv(fake / "CESM2-SMYLE_NOV.PRE.1970-2020.enso.csv", index_col=0).iloc[:, 0]
     rho = np.corrcoef(planted.loc[gt["target_year"]].to_numpy(), np.log(gt["smyle_std"]))[0, 1]
     assert rho > 0.7
     assert (gt["smyle_std_se"] / gt["smyle_std"]).round(3).eq(round(1 / np.sqrt(38), 3)).all()
@@ -48,10 +48,10 @@ def test_smyle_significance_family(fake, tmp_path):
         "season": {"target_months": [1, 2, 3]},
         "observations": {"forced_response": "quadratic"},
     }
-    gt = smyle.build(cfg, "PRECT", local_dir=fake)
+    gt = smyle.build(cfg, "PRE", local_dir=fake)
     gt.to_csv(tmp_path / "smyle_truth.csv", index=False)
     rng = np.random.default_rng(5)
-    planted = pd.read_csv(fake / "CESM2-SMYLE_NOV.PRECT.1970-2020.enso.csv", index_col=0).iloc[:, 0]
+    planted = pd.read_csv(fake / "CESM2-SMYLE_NOV.PRE.1970-2020.enso.csv", index_col=0).iloc[:, 0]
     years = gt["target_year"].to_numpy()
     pred = pd.DataFrame({"year": years, "y": gt["m1"].to_numpy(), "climatology_loo_crps": 0.6})
     for k in ("boosting", "nn_gaussian", "nn_shash", "deep_ensemble"):

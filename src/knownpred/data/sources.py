@@ -85,7 +85,30 @@ CESM2_LENS = DataSource(
     ),
 )
 
-SOURCES = {s.key: s for s in (ERSST_V5, NCLIMGRID, CESM2_LENS)}
+CESM2_SMYLE = DataSource(
+    key="smyle",
+    name="CESM2 Seasonal-to-Multiyear Large Ensemble (SMYLE), November starts, precipitation",
+    role="Perfect-model truth for real years: 20-member hindcasts from the observed 1 November state, 1970-2020",
+    urls=(
+        "https://thredds.rda.ucar.edu/thredds/fileServer/files/d010074/data/CESM2-SMYLE_NOV.PRE.1970-2020.nc",
+        "https://tds.gdex.ucar.edu/thredds/fileServer/files/d010074/data/CESM2-SMYLE_NOV.PRE.1970-2020.nc",
+    ),
+    variable="PRE (mm/day)",
+    terms="CC BY 4.0 (NCAR GDEX).",
+    citation=(
+        "Yeager, S. G., et al. (2022): The Seasonal-to-Multiyear Large Ensemble (SMYLE) prediction "
+        "system using the Community Earth System Model version 2. Geosci. Model Dev., 15, 6451-6493, "
+        "doi:10.5194/gmd-15-6451-2022. Data: NCAR GDEX, CESM2 SMYLE, doi:10.26024/PWMA-RE41; "
+        "November-start processed collection, GDEX dataset d010074."
+    ),
+    notes=(
+        "Only the HDF5 chunks covering January-March and the target box are read through HTTP range "
+        "requests (OPeNDAP fails on this server for 64-bit integer coordinates). The regional target "
+        "per year and member is cached in data/raw/smyle/smyle_PRE_target.nc with source URL and access date."
+    ),
+)
+
+SOURCES = {s.key: s for s in (ERSST_V5, NCLIMGRID, CESM2_LENS, CESM2_SMYLE)}
 
 
 def data_markdown() -> str:

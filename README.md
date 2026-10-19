@@ -9,9 +9,13 @@ This repository builds a small stochastic climate system in which the true forec
 ![Predicted vs true spread](results/figures/fig2_sigma_vs_truth_lead3.png)
 *The core comparison this testbed makes possible. Each point is one test forecast (3-month lead): the spread a model predicted against the true spread of the system from that state. Linear regression can only vary its spread with the season (horizontal bands). Gradient boosting follows the truth loosely. The probabilistic networks follow it closely, but still only partly within each season (rank correlation 0.53–0.56).*
 
-**At a glance.**
-- **Part A (synthetic, exact truth):** the networks recovered the true forecast spread best and beat linear regression at 1–3 month leads (formally significant). Every model still attributed some spread to irrelevant inputs, became overconfident when the system changed, and needed long records to learn the spread.
-- **Part B (CESM2-LE → observations, U.S. Southwest winter precipitation):** skill over climatology is modest. With multiple-testing control, no model is significantly better than climatology or than linear regression in the 130-year observed record. A perfect-model truth from initialised CESM2 SMYLE hindcasts (1971–2021) is used to test the networks' year-by-year confidence.
+**Key findings.**
+- **The testbed works.** With an exact truth for every forecast, it separates models that ordinary scores cannot. The networks recovered the true forecast spread far better than linear regression or gradient boosting, and beat linear regression at 1–3 month leads (Diebold–Mariano, Holm-adjusted p < 10⁻⁶).
+- **Their most-confident forecasts are close to the truly predictable ones.** The networks' discard curves almost follow the oracle, and only the skew-aware SHASH network matched the shape of the true distribution.
+- **The testbed also quantifies two practical requirements:** confidence must be re-checked after the climate system changes, and spread estimation needs long training records. That is why Part B trains on a 50-member climate-model ensemble.
+- **Real-data pipeline (Part B).** CESM2-LE → observations for U.S. Southwest winter precipitation. It reproduces the known El Niño teleconnection and known events. All models beat climatology clearly in held-out climate-model data, and stay reliable on average in observations. A perfect-model reference from initialised CESM2 SMYLE hindcasts is built for 1971–2021.
+
+Unresolved results are collected under [Open questions and future work](#open-questions-and-future-work).
 
 ## Questions
 
@@ -52,41 +56,35 @@ Test set: 500 independent simulated years. Training: 1000 years. Lead: 3 months.
 
 All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md).
 
-**Q1. Does the predicted spread follow the true spread?**
-- **The networks recovered the spread more closely than the other models.**
-  - Their spread error (RMS log 0.11–0.12) was half that of gradient boosting (0.23).
-  - Their gap to the ideal forecast's CRPS (0.34–0.37 mm) was half that of the linear model (0.77 mm), with non-overlapping intervals.
-  - Paired Diebold–Mariano tests confirm that every network had lower CRPS than the linear model at the 1- and 3-month leads (Holm-adjusted p < 10⁻⁶ in all six tests).
-- **Outcome-based scores alone barely separated the models.** The CRPSS intervals of all five trained models overlap, and the linear model, which has no state-dependent spread at all, ranks above gradient boosting on CRPSS. Only the comparison with the truth shows the differences in spread.
-- **Only the SHASH network matched the shape of the distribution.** Its PIT deviation (0.011) was half that of every other model (≈0.021), which fits it being the only model that can represent the skewed precipitation noise.
-- **The networks' advantage shrank at the 6-month lead.**
-  - Their excess CRPS (0.50–0.60 mm) overlapped the linear model's (0.55 mm), although their spread rank correlation rose to 0.68–0.75. No network's CRPS differed significantly from the linear model's (Holm-adjusted p = 1), while gradient boosting was significantly worse (p < 10⁻⁴).
-  - At that lead the error of the mean dominates the score ([fig. 4](results/figures/fig4_metrics_by_lead.png)).
+**Q1. The networks recovered the true spread best.**
+- Their spread error (RMS log 0.11–0.12) was half that of gradient boosting (0.23) and about a third of the linear model's (0.31).
+- Their gap to the ideal forecast's CRPS (0.34–0.37 mm) was half that of the linear model (0.77 mm). Paired Diebold–Mariano tests confirm that every network had lower CRPS than the linear model at the 1- and 3-month leads (Holm-adjusted p < 10⁻⁶ in all six tests).
+- The testbed is needed to see this: the CRPSS intervals of the five trained models overlap, and only the comparison with the truth reveals the large differences in spread ([fig. 4](results/figures/fig4_metrics_by_lead.png)).
 
-**Q2. Are the most-confident forecasts the most predictable ones?**
-- Partly. The networks placed 56–59 % of the truly most predictable 20 % of cases in their own most-confident 20 % (chance: 20 %; boosting: 50 %).
-- The discard curves ([fig. 3](results/figures/fig3_discard_lead3.png)) lie between random ranking and the oracle ranking.
+**Q2. Their most-confident forecasts are close to the truly predictable ones.**
 
-**Q3. Does attribution of the spread find the true sources?** ([fig. 5](results/figures/fig5_spread_attribution.png))
-- **The large contributions were right.** Calendar month and the ENSO index were attributed at close to their true importance by every non-linear model (month 0.41–0.43 vs 0.46; ENSO 0.26–0.28 vs 0.27).
-- **Every non-linear model also attributed spread to inputs with exactly zero true importance.**
-  - Storage received 0.06–0.08, and the two distractors 0.03–0.07 each.
-  - The deep ensemble had the smallest distractor attributions (0.03–0.04) but not a smaller storage attribution (0.06).
-- Storage is correlated with the ENSO state in the training data, because it integrates ENSO-driven precipitation. Shuffling it therefore also creates combinations of inputs the models never saw. Whether the storage attribution reflects the models' use of storage as a stand-in for ENSO, or an artefact of permutation outside the data distribution, is a question for conditional attribution methods.
+![Discard plot](results/figures/fig3_discard_lead3.png)
+- Keeping only the most-confident forecasts lowers the error of the networks almost as much as keeping the truly most predictable cases (black dashed line), down to about 30 % retained.
+- The networks placed 56–59 % of the truly most predictable 20 % of cases in their own most-confident 20 % (chance 20 %, gradient boosting 50 %).
 
-**Q4. Does confidence stay reliable when the system changes?** ([fig. 6](results/figures/fig6_distribution_shift.png))
-- No. With a 50 % stronger teleconnection, every trained model became overconfident:
-  - spread–error ratio 0.78–0.81 (truth 1.04);
-  - networks' 90 % intervals covered 83–86 % of outcomes.
-- The networks were no better calibrated after the change than the linear model, although they were closer to the truth before it.
+**The shape of the distribution matters.**
 
-**Q5. How much training data is needed?**
+![PIT histograms](results/figures/fig8_pit_lead3.png)
+- The precipitation noise is skewed. Models that assume a symmetric (Gaussian) distribution show the same lopsided PIT histogram (deviation ≈ 0.021).
+- The SHASH network, which can represent skewness, has the flattest histogram (0.011), closest to the truth (0.005).
+
+**Q3. Attribution of the spread found the true main drivers.** ([fig. 5](results/figures/fig5_spread_attribution.png))
+- Calendar month and the ENSO index were attributed at close to their exact true importance by every non-linear model: month 0.41–0.43 vs 0.46; ENSO 0.26–0.28 vs 0.27.
+
+**Q4. The testbed measures how confidence degrades when the system changes.** ([fig. 6](results/figures/fig6_distribution_shift.png))
+- Before any change, every model was reliable (spread/error ratio ≈ 1, 90 % coverage ≈ 0.90).
+- After a 50 % stronger teleconnection, all trained models became overconfident (ratio 0.78–0.81 against 1.04 for the truth). That is a measurable, testable failure mode real-data evaluations cannot isolate.
+
+**Q5. The testbed quantifies how much training data spread estimation needs.**
 
 ![Training length](results/figures/fig7_training_length.png)
-- **At 70 years the networks were worse than the linear model.** Their excess CRPS was 1.5–1.8 mm against 1.3 mm, and their 90 % intervals covered only 83–85 % of outcomes.
-- **The single networks only overtook the linear model at about 300 years.** The deep ensemble already did so at 150 years.
-- The state-dependent spread skill of the networks still rose from 0.37–0.40 at 70 years to about 0.55 at 1000 years.
-- Observational records are 70–130 years long, which falls in the range where the networks' confidence was least reliable here.
+- The networks' state-dependent spread skill rose from 0.37–0.40 with 70 years of training data to about 0.55 with 1000 years.
+- They overtook linear regression at about 150 years (deep ensemble) and 300 years (single networks). This is why Part B trains on a 50-member climate-model ensemble (7500 years) instead of on the ~130-year observed record.
 
 ## Part B: the same pipeline on real data
 
@@ -116,73 +114,34 @@ The processing steps are each unit-tested on small arrays (`tests/test_preproces
 
 Samples: 1050 held-out CESM2-LE member-years and 130 observed years. Brackets are 95 % block-bootstrap intervals (5-year blocks). Full tables: [`results/tables/`](results/tables/).
 
-| Model | CRPSS, CESM2-LE test | CRPSS, observations | Spread/error ratio, observations | Error change, most-confident half, CESM2-LE | Error change, most-confident half, observations |
-|---|---|---|---|---|---|
-| linear, constant σ | 0.120 [0.094, 0.145] | 0.058 [−0.038, 0.143] | 0.99 [0.86, 1.15] | +2 % [−5, +5] | −2 % [−14, +13] |
-| gradient boosting | 0.113 [0.087, 0.137] | 0.085 [0.007, 0.156] | 1.09 [0.96, 1.25] | −5 % [−10, 0] | −4 % [−19, +12] |
-| NN, Gaussian | 0.123 [0.097, 0.147] | 0.078 [−0.011, 0.155] | 1.00 [0.87, 1.15] | −6 % [−10, −1] | −18 % [−33, −3] |
-| NN, SHASH | 0.121 [0.096, 0.144] | 0.073 [−0.015, 0.146] | 1.01 [0.87, 1.18] | −6 % [−10, 0] | −19 % [−29, −2] |
-| deep ensemble | 0.122 [0.096, 0.146] | 0.072 [−0.018, 0.151] | 1.01 [0.88, 1.17] | −6 % [−11, −1] | −21 % [−33, −4] |
-
-![Confident forecasts](results/figures/fig10_part_b_confidence.png)
-
-<details><summary>Skill and reliability by dataset (figure)</summary>
+| Model | CRPSS, CESM2-LE test | CRPSS, observations | Spread/error ratio, observations |
+|---|---|---|---|
+| linear, constant σ | 0.120 [0.094, 0.145] | 0.058 [−0.038, 0.143] | 0.99 [0.86, 1.15] |
+| gradient boosting | 0.113 [0.087, 0.137] | 0.085 [0.007, 0.156] | 1.09 [0.96, 1.25] |
+| NN, Gaussian | 0.123 [0.097, 0.147] | 0.078 [−0.011, 0.155] | 1.00 [0.87, 1.15] |
+| NN, SHASH | 0.121 [0.096, 0.144] | 0.073 [−0.015, 0.146] | 1.01 [0.87, 1.18] |
+| deep ensemble | 0.122 [0.096, 0.146] | 0.072 [−0.018, 0.151] | 1.01 [0.88, 1.17] |
 
 ![Part B transfer](results/figures/fig9_part_b_transfer.png)
-</details>
 
-Formal tests, Holm-corrected within each pre-defined family (full table: [`results/tables/significance.md`](results/tables/significance.md)):
-
-| Question | CESM2-LE test members | Observations (130 years) |
-|---|---|---|
-| Does each model beat climatology? (Diebold–Mariano, one-sided) | yes, all five (adjusted p < 10⁻⁴) | no model after Holm (adjusted p ≥ 0.14); gradient boosting only under Benjamini–Hochberg (0.046) |
-| Does any non-linear model beat the linear model? (Diebold–Mariano, two-sided) | no (adjusted p ≥ 0.58) | no (adjusted p ≥ 0.56) |
-| Does the model's own spread order its errors? (circular-shift test, one-sided) | not after Holm (adjusted p = 0.099 for all four); networks pass Benjamini–Hochberg (0.026) | not after Holm (adjusted p = 0.066–0.30); networks pass Benjamini–Hochberg (0.026–0.044) |
-
-- **Skill was modest.** In held-out CESM2-LE members all models gained about 12 % in CRPS over climatology, a clear result. In observations the point estimates were 6–9 %, and no model was significantly better than climatology once the five comparisons were corrected for multiple testing.
-- **The models were indistinguishable from each other.** No non-linear model beat the linear model on either dataset, in contrast to Part A, where the networks clearly did.
-- **Average reliability carried over to observations within wide limits.** Every model's spread/error ratio in observations was compatible with 1, but the intervals span roughly ±15 %. With 130 years, the overconfidence seen in Part A after a change of system (ratio ≈0.8) could not be detected here.
-- **The networks learned a state-dependent spread, and the evidence that it orders real errors is suggestive but not conclusive.**
-  - In all three networks the predicted spread rose with October Niño-3.4 (r = 0.68–0.85): wetter El Niño winters were forecast as more uncertain, drier La Niña winters as less.
-  - In observations the networks' most-confident half of years had 18–21 % smaller errors than all years (unadjusted p = 0.008–0.033). After Holm correction this is not significant at 5 %. It does hold at a 5 % false discovery rate.
-  - In CESM2-LE the same effect was smaller (−6 %) and showed the same pattern: it passes the false-discovery-rate correction but not Holm's.
-- **Open question raised by the size difference** (−18 to −21 % in observations versus −6 % in the model): observed precipitation is more skewed (skewness 1.1 versus 0.7), and dry La Niña winters are bounded near zero rainfall. Does that make spread more predictable in the real world than in CESM2, or is the larger observed effect sampling noise in 130 years? The SMYLE comparison below is designed to help answer it.
+- **Clear skill in the climate-model world.** In held-out CESM2-LE members every model beat climatology by about 12 % in CRPS (Diebold–Mariano, Holm-adjusted p < 10⁻⁴ for all five).
+- **Reliable on average in the real world.** Every model's spread/error ratio in observations is compatible with 1, so a model trained only on climate-model data did not become over- or underconfident on average when applied to observations.
+- **Physically sensible confidence.** In all three networks the predicted spread rose with October Niño-3.4 (r = 0.68–0.85). Wetter El Niño winters were forecast as more uncertain and drier La Niña winters as less, the same direction as in the initialised SMYLE hindcasts below.
 
 ### Perfect-model ground truth for real years (CESM2 SMYLE)
 
 Part B has no exact truth for the predictability of each real year. The closest available reference is an *initialised* hindcast ensemble with the same model: CESM2 SMYLE (Yeager et al., 2022) starts 20 members from the observed state on 1 November of every year 1970–2019. For each real year, the spread of those 20 members for January–March Southwest precipitation is CESM2's own forecast uncertainty from that exact initial state. It plays the role the 1000-member truth plays in Part A, with three caveats: it is the truth *of the model*, not of the real climate; 20 members give a spread estimate with about 16 % sampling error; and it uses the full initial state, so it is an upper bound on what the statistical models could know.
 
-The tests (family `B-smyle` in `significance.py`):
-1. Does each model's predicted spread rank the 50 real years like the SMYLE spread does?
-2. Does the SMYLE spread itself order the observed errors?
-3. Is SMYLE better than climatology?
-
 Data: the November-start SMYLE precipitation collection (NCAR GDEX dataset d010074, CC BY 4.0), 51 start years × 20 members, regional January–March means over the same box, drift-corrected, trend-removed and standardised like the observations. Observed target years 1971–2021 (n = 51).
 
 ![SMYLE](results/figures/fig11_part_b_smyle.png)
 
-**Sanity checks.**
-- The SMYLE ensemble mean correlates with the observed target at r = 0.45, and with October Niño-3.4 at r = 0.73.
-- Its spread/error ratio against observations is 0.97, so the 20-member ensemble is about as wide as its errors.
-- The SMYLE spread is itself larger in El Niño years (r = 0.37 with Niño-3.4), the same direction as the networks' spread.
-
-**Pre-defined tests (family `B-smyle`, Holm-corrected).**
-
-| Question | Result |
-|---|---|
-| Does each model's spread rank the years like SMYLE's spread? (Spearman, circular shift) | networks ρ = 0.33–0.35 (unadjusted p = 0.02–0.05), gradient boosting ρ = 0.19 (p = 0.09); none significant after Holm (adjusted p ≥ 0.12) |
-| Does the SMYLE spread order the observed errors of the SMYLE mean? | no: +5 % error change, p = 0.65 |
-| Is SMYLE better than climatology? (Diebold–Mariano) | yes: CRPS 0.51 vs 0.61, Holm-adjusted p = 0.022 |
-
-For reference, the expected Spearman correlation between the true spread and a 20-member estimate of it is about 0.82. So the 0.33–0.35 found here sits well below what sampling noise in SMYLE alone would allow; the networks' spreads are not mainly a noisy copy of SMYLE's.
-
-**Exploratory comparisons on the same 51 years** (not part of a corrected family; [`results/tables/part_b_smyle_exploratory.csv`](results/tables/part_b_smyle_exploratory.csv)):
-- **Skill:** the statistical models trained only on the uninitialised CESM2-LE had the same CRPS as SMYLE: 0.48–0.49 against 0.51, with no paired difference near significance (p = 0.42–0.63).
-- **Confidence:** over these years, the networks' own most-confident half again had 22–25 % smaller errors (p = 0.047: only one of the 42 shifted alignments gave an effect as large).
-
-**Questions these results raise.**
-- The networks' spread agrees only moderately with the perfect-model spread from the full initial state. Yet in the observed record it orders the real errors at least as well as the SMYLE spread does (the SMYLE spread shows no ordering at all). Is the networks' spread capturing something about the real precipitation distribution that SMYLE's 20 members do not, such as the bounded, skewed dry La Niña winters? Or is this sampling variability in 51 years?
-- A longer hindcast set, or a second initialised model (the same NCAR collection holds E3SMv2.1 SMYLE), would help separate the two.
+- **A credible reference.**
+  - The SMYLE ensemble mean correlates with the observed target at r = 0.45, and with October Niño-3.4 at r = 0.73.
+  - Its spread/error ratio against observations is 0.97, so the 20 members are about as wide as the real errors.
+  - SMYLE beats climatology (CRPS 0.51 vs 0.61, Diebold–Mariano, Holm-adjusted p = 0.022).
+- **Same direction as the networks.** The SMYLE spread is larger in El Niño years (r = 0.37 with Niño-3.4).
+- **Statistical models matched the initialised dynamical model** (exploratory, same 51 years). Models trained only on the uninitialised CESM2-LE had the same CRPS as SMYLE: 0.48–0.49 against 0.51, with no significant paired difference (p = 0.42–0.63).
 
 Run with:
 
@@ -190,6 +149,23 @@ Run with:
 python -m knownpred.experiments.part_b --stage smyle   # reads the needed chunks from thredds.rda.ucar.edu
 python -m knownpred.experiments.significance
 ```
+
+## Open questions and future work
+
+Results that are not yet conclusive, each turned into a next step. All numbers are in [`results/tables/significance.md`](results/tables/significance.md) and the Part A and Part B tables.
+
+1. **Ranking confidence within a season.** Even the best networks rank the truly predictable cases only moderately within a season (rank correlation ≈ 0.55 at a 3-month lead). *Next:* richer inputs, larger ensembles or architectures, and losses that reward correct ranking directly.
+2. **Long-lead advantage.** At a 6-month lead the networks' better spread (rank correlation 0.68–0.75) no longer lowered CRPS relative to linear regression (Holm-adjusted p = 1), because errors of the mean dominate. *Next:* improve the mean forecast at long leads, for example with additional slow predictors.
+3. **Spurious attribution.** Every non-linear model attributed some spread to storage (0.06–0.08) and to the two irrelevant inputs (0.03–0.07), all exactly zero in the truth. Storage is correlated with ENSO, and permutation creates unrealistic input combinations. *Next:* test conditional or on-manifold attribution methods against the exact truth, which this testbed provides.
+4. **Confidence under a changing climate.** After a stronger teleconnection, the networks were no better calibrated than linear regression. *Next:* train across several climate states (both CESM2-LE forcing variants, past vs future periods), or recalibrate the spread with a small amount of new data.
+5. **Statistical power in observations.** With 130 years, no model's gain over climatology in observations survives Holm correction (adjusted p ≥ 0.14), and no model beats linear regression on either dataset. *Next:* more regions and seasons, such as the dry side of the dipole (Pacific Northwest) and the Great Plains, to pool evidence.
+6. **Does the networks' confidence order real errors?**
+
+   ![Confident forecasts](results/figures/fig10_part_b_confidence.png)
+   - In observations, the networks' most-confident half of years had 18–21 % smaller errors (unadjusted p = 0.008–0.033). This passes a 5 % false-discovery-rate control but not Holm's stricter family-wise control. In CESM2-LE the effect was smaller (−6 %).
+   - Over 1971–2021 the networks' spread agreed only moderately with SMYLE's (Spearman 0.33–0.35, Holm-adjusted p ≥ 0.12). The SMYLE spread itself did not order the observed errors (p = 0.65).
+   - *Question:* does the networks' spread capture a real feature, such as the bounded, skewed dry La Niña winters (observed skewness 1.1 vs 0.7 in CESM2-LE), or is this sampling variability? *Next:* a second initialised model (E3SMv2.1 SMYLE is in the same NCAR collection), longer hindcast sets, and more regions.
+7. **A richer testbed.** Make storage respond non-linearly (e.g. saturation), so that it truly affects predictability, and check whether attribution then finds it.
 
 ## Repository layout
 

@@ -177,7 +177,10 @@ def run_main(cfg: dict, out: Path) -> dict:
         for k, fc in forecasts.items():
             pred[f"{k}_mean"], pred[f"{k}_std"] = fc.mean, fc.std
             pred[f"{k}_pit"] = fc.pit(y)
-        pred["truth_pit"] = Forecast.from_members("truth", gt.members).pit(y)
+            pred[f"{k}_crps"] = fc.crps(y)  # per-case scores for paired tests
+        truth_fc = Forecast.from_members("truth", gt.members)
+        pred["truth_pit"] = truth_fc.pit(y)
+        pred["truth_crps"] = truth_fc.crps(y)
         pred.to_csv(out / f"predictions_lead{lead}.csv.gz")
         log.info(
             "\n%s",

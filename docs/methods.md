@@ -104,6 +104,22 @@ Truth-based metrics (testbed only):
 
 **Spread attribution.** Grouped permutation importance of the predicted σ: the mean absolute relative change in σ when one predictor group is shuffled. Calendar month (sine and cosine) is shuffled as one group. The same quantity is computed for the *true* σ by Monte Carlo, using common random numbers so that true zeros are exactly zero. Integrated gradients (Sundararajan et al., 2017) are available for the networks.
 
+**Formal hypothesis tests** (`src/knownpred/stats_tests.py`, driver `experiments/significance.py`). Confidence intervals describe uncertainty; the tests below answer pre-specified yes/no questions, with a correction for testing many hypotheses at once.
+
+- *Paired score differences: Diebold–Mariano test.* For two forecasts scored on the same cases, H0: E[CRPS_a − CRPS_b] = 0 (Diebold & Mariano, 1995). The variance of the mean difference uses a Newey–West (1987) Bartlett-kernel estimator. Its truncation lag comes from the AR(1) plug-in rule of Andrews (1991), and lag products are formed only within one series (one ensemble member). The statistic carries the small-sample correction of Harvey, Leybourne & Newbold (1997) and is compared with Student-t, n − 1 degrees of freedom. Because the CRPS is a proper score, a significant difference concerns the whole forecast distribution, not only its mean.
+- *Confidence ranking: circular-shift test.* H0: a model's predicted spread is unrelated to its realised errors. Statistic: relative change in mean absolute error of the most-confident half against all cases. The null distribution comes from circularly shifting the spread series against the error series by every admissible offset (≥ 5 years from alignment), within each ensemble member. This keeps the autocorrelation of both series and breaks only their pairing. The same test, with Spearman correlation as statistic, compares predicted spreads with the SMYLE ensemble spread.
+- *Multiple testing.* Hypotheses are grouped into families fixed in advance (`significance.py` lists them). Holm (1979) step-down adjusted p-values control the family-wise error rate, and Benjamini–Hochberg (1995) adjusted p-values control the false discovery rate. Both are reported. A result is called significant only if its Holm-adjusted p-value is below 0.05; results that pass only Benjamini–Hochberg are reported as such.
+- *Measured false-positive rate of the Diebold–Mariano test* (simulated AR(1) loss differentials under H0, 600 repetitions, nominal 5 %):
+
+  | lag-1 autocorrelation | n = 130 | n = 300 | n = 1000 |
+  |---|---|---|---|
+  | 0 | 5.0 % | 5.8 % | 5.7 % |
+  | 0.6 | 10.3 % | 9.0 % | 7.5 % |
+  | 0.9 | 21.5 % | 16.7 % | 10.2 % |
+
+  Like every HAC-based test, it rejects too often when the differential is strongly persistent and the sample is short. `significance.csv` therefore reports the lag-1 autocorrelation of every tested differential. In Part B these are close to zero (|r| < 0.2), where the test holds its nominal level.
+- *Resolution of the shift test.* With m admissible shifts, the smallest attainable p-value is 1/(m + 1): about 0.007 for 150-year members and 0.008 for the 130-year observed record.
+
 ## 5. Part B pipeline
 
 1. **Extract.** CESM2-LE `TS` and `PRECC + PRECL` (historical + SSP3-7.0, CMIP6 forcing variant, 1900–2050, all 50 members) are read over HTTPS from the public Zarr stores on AWS. Only the tropical Pacific domain (TS), the U.S. Southwest box (precipitation) and the calendar months the analysis uses are kept. The stores are chunked as one member × 600 months × the full globe, so whole chunks (about 600 of 80–110 MB each) are transferred even though only a small subset is kept. Months are labelled from the midpoint of `time_bnds` (`fix_cesm_time`), which is robust to the end-of-interval time stamps of raw CESM output.
@@ -120,6 +136,14 @@ Truth-based metrics (testbed only):
 7. **Evaluation.** Scores are computed on held-out CESM2-LE members (the perfect-model test) and on observations. For observations the reference is a leave-one-year-out climatology.
 
 ## References
+
+- Andrews, D. W. K. (1991). Heteroskedasticity and autocorrelation consistent covariance matrix estimation. *Econometrica*, 59, 817–858.
+- Benjamini, Y., & Hochberg, Y. (1995). Controlling the false discovery rate. *J. R. Stat. Soc. B*, 57, 289–300.
+- Diebold, F. X., & Mariano, R. S. (1995). Comparing predictive accuracy. *J. Bus. Econ. Stat.*, 13, 253–263.
+- Harvey, D., Leybourne, S., & Newbold, P. (1997). Testing the equality of prediction mean squared errors. *Int. J. Forecasting*, 13, 281–291.
+- Holm, S. (1979). A simple sequentially rejective multiple test procedure. *Scand. J. Stat.*, 6, 65–70.
+- Newey, W. K., & West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica*, 55, 703–708.
+- Yeager, S. G., et al. (2022). The Seasonal-to-Multiyear Large Ensemble (SMYLE) prediction system using the Community Earth System Model version 2. *Geosci. Model Dev.*, 15, 6451–6493.
 
 - Burgers, G., Jin, F.-F., & van Oldenborgh, G. J. (2005). The simplest ENSO recharge oscillator. *Geophys. Res. Lett.*, 32, L13706.
 - Davidian, M., & Carroll, R. J. (1987). Variance function estimation. *J. Amer. Stat. Assoc.*, 82, 1079–1091.

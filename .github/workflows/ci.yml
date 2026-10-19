@@ -39,6 +39,8 @@ jobs:
         run: python -m knownpred.experiments.part_a --quick --skip training_length
       - name: Part B pipeline on synthetic stand-in data
         run: python -m knownpred.experiments.part_b --fake-data
+      - name: Significance tests on the smoke-run outputs
+        run: python -m knownpred.experiments.significance --part-a runs/part_a_quick --part-b runs/part_b_fake --out /tmp/sig
 
   core-only:
     # The core package must work without the optional PyTorch / xarray extras.

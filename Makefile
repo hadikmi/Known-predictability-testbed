@@ -2,7 +2,7 @@
 # Part B needs internet access (~1 GB of CESM2-LE subsets, several GB of nClimGrid).
 PY ?= python
 
-.PHONY: install test lint part-a part-a-quick part-b-data part-b part-b-fake figures all clean
+.PHONY: install test lint part-a part-a-quick part-b-data part-b part-b-fake part-b-smyle significance figures all clean
 
 install:
 	$(PY) -m pip install -e ".[all]"
@@ -32,10 +32,16 @@ part-b:
 part-b-fake:             ## Part B pipeline on synthetic stand-in files (no download; results meaningless)
 	$(PY) -m knownpred.experiments.part_b --config configs/part_b.yaml --fake-data
 
+part-b-smyle:            ## perfect-model truth from CESM2 SMYLE hindcasts (needs thredds.rda.ucar.edu)
+	$(PY) -m knownpred.experiments.part_b --config configs/part_b.yaml --stage smyle
+
+significance:            ## Diebold-Mariano and shift tests with Holm / Benjamini-Hochberg control
+	$(PY) -m knownpred.experiments.significance
+
 figures:
 	$(PY) -m knownpred.plotting
 
-all: test part-a part-b-data part-b figures
+all: test part-a part-b-data part-b part-b-smyle significance figures
 
 clean:
 	rm -rf runs/*_quick runs/part_b_fake data/fake .pytest_cache .ruff_cache

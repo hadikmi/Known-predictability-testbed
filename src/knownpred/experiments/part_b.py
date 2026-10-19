@@ -224,6 +224,7 @@ def evaluate_stage(cfg: dict) -> dict[str, pd.DataFrame]:
         pred["y"] = y
         for k, fc in fcs.items():
             pred[f"{k}_mean"], pred[f"{k}_std"], pred[f"{k}_pit"] = fc.mean, fc.std, fc.pit(y)
+            pred[f"{k}_crps"] = fc.crps(y)  # per-case scores for paired tests
         pred.to_csv(out / f"predictions_{name}.csv", index=False)
         log.info(
             "%s:\n%s",
@@ -245,12 +246,38 @@ def evaluate_stage(cfg: dict) -> dict[str, pd.DataFrame]:
     return results
 
 
+def smyle_stage(cfg: dict) -> pd.DataFrame:
+    """Per-year SMYLE ensemble statistics for the target (perfect-model truth).
+
+    Reads a local copy from <raw>/smyle/ if present, else OPeNDAP. Writes
+    runs/part_b/smyle_truth.csv; the comparison with the statistical models
+    and its tests are in knownpred.experiments.significance (family B-smyle).
+    """
+    from ..data import smyle
+
+    out = Path(cfg["output_dir"])
+    gt = smyle.build(
+        cfg,
+        var=cfg.get("smyle", {}).get("variable", "PRECT"),
+        local_dir=Path(cfg["paths"]["raw"]) / "smyle",
+    )
+    gt.to_csv(out / "smyle_truth.csv", index=False)
+    log.info(
+        "SMYLE truth: %d start years, %d members; spread range %.2f-%.2f (standardised)",
+        len(gt),
+        int(gt["members"].max()),
+        gt["smyle_std"].min(),
+        gt["smyle_std"].max(),
+    )
+    return gt
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--config", default="configs/part_b.yaml")
-    ap.add_argument("--stage", choices=["preprocess", "evaluate", "all"], default="all")
+    ap.add_argument("--stage", choices=["preprocess", "evaluate", "smyle", "all"], default="all")
     ap.add_argument(
         "--fake-data",
         action="store_true",
@@ -279,6 +306,8 @@ def main(argv=None) -> None:
         preprocess(cfg)
     if args.stage in ("evaluate", "all"):
         evaluate_stage(cfg)
+    if args.stage == "smyle":  # needs network access to NCAR (or a local copy)
+        smyle_stage(cfg)
 
 
 if __name__ == "__main__":

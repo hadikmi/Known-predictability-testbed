@@ -51,10 +51,11 @@ All leads: [`results/tables/part_a_metrics.md`](results/tables/part_a_metrics.md
 - **The networks recovered the spread more closely than the other models.**
   - Their spread error (RMS log 0.11–0.12) was half that of gradient boosting (0.23).
   - Their gap to the ideal forecast's CRPS (0.34–0.37 mm) was half that of the linear model (0.77 mm), with non-overlapping intervals.
+  - Paired Diebold–Mariano tests confirm that every network had lower CRPS than the linear model at the 1- and 3-month leads (Holm-adjusted p < 10⁻⁶ in all six tests).
 - **Outcome-based scores alone barely separated the models.** The CRPSS intervals of all five trained models overlap, and the linear model, which has no state-dependent spread at all, ranks above gradient boosting on CRPSS. Only the comparison with the truth shows the differences in spread.
 - **Only the SHASH network matched the shape of the distribution.** Its PIT deviation (0.011) was half that of every other model (≈0.021), which fits it being the only model that can represent the skewed precipitation noise.
 - **The networks' advantage shrank at the 6-month lead.**
-  - Their excess CRPS (0.50–0.60 mm) overlapped the linear model's (0.55 mm), although their spread rank correlation rose to 0.68–0.75.
+  - Their excess CRPS (0.50–0.60 mm) overlapped the linear model's (0.55 mm), although their spread rank correlation rose to 0.68–0.75. No network's CRPS differed significantly from the linear model's (Holm-adjusted p = 1), while gradient boosting was significantly worse (p < 10⁻⁴).
   - At that lead the error of the mean dominates the score ([fig. 4](results/figures/fig4_metrics_by_lead.png)).
 
 **Q2. Are the most-confident forecasts the most predictable ones?**
@@ -116,15 +117,38 @@ Samples: 1050 held-out CESM2-LE member-years and 130 observed years. Brackets ar
 ![Part B transfer](results/figures/fig9_part_b_transfer.png)
 ![Confident forecasts](results/figures/fig10_part_b_confidence.png)
 
-- **Skill is modest, and in observations it cannot be separated from zero for most models.**
-  - In held-out CESM2-LE members all models gained about 12 % in CRPS over climatology, with no meaningful difference between them.
-  - In observations the point estimates were 6–9 %, and only gradient boosting's interval excluded zero.
-- **Average reliability carried over to observations within wide limits.** Every model's spread/error ratio in observations was compatible with 1, but the intervals span roughly ±15 %. With 130 years, the overconfidence seen in Part A after a change of system (ratio ≈0.8) could not be detected here.
-- **The networks learned a state-dependent spread that also ordered the real errors.**
-  - In all three networks the predicted spread rose with October Niño-3.4 (r = 0.68–0.85): wetter El Niño winters were forecast as more uncertain, drier La Niña winters as less.
-  - In observations, the networks' most-confident half of years had 18–21 % smaller errors than all years, with intervals excluding zero but only narrowly. The linear model, whose spread is constant and whose ranking is therefore arbitrary, showed no effect, as expected.
-- **The confidence effect was larger in observations than in the climate model** (−18 to −21 % versus −6 %). One possible explanation is that observed precipitation is more skewed (skewness 1.1 versus 0.7 in CESM2-LE): dry La Niña winters are bounded near zero rainfall and so vary less. Whether the networks' spread tracks this through ENSO alone, and whether the difference survives a longer or independent observational record, are open questions.
+Formal tests, Holm-corrected within each pre-defined family (full table: [`results/tables/significance.md`](results/tables/significance.md)):
 
+| Question | CESM2-LE test members | Observations (130 years) |
+|---|---|---|
+| Does each model beat climatology? (Diebold–Mariano, one-sided) | yes, all five (adjusted p < 10⁻⁴) | no model after Holm (adjusted p ≥ 0.14); gradient boosting only under Benjamini–Hochberg (0.046) |
+| Does any non-linear model beat the linear model? (Diebold–Mariano, two-sided) | no (adjusted p ≥ 0.58) | no (adjusted p ≥ 0.56) |
+| Does the model's own spread order its errors? (circular-shift test, one-sided) | not after Holm (adjusted p = 0.099 for all four); networks pass Benjamini–Hochberg (0.026) | not after Holm (adjusted p = 0.066–0.30); networks pass Benjamini–Hochberg (0.026–0.044) |
+
+- **Skill was modest.** In held-out CESM2-LE members all models gained about 12 % in CRPS over climatology, a clear result. In observations the point estimates were 6–9 %, and no model was significantly better than climatology once the five comparisons were corrected for multiple testing.
+- **The models were indistinguishable from each other.** No non-linear model beat the linear model on either dataset, in contrast to Part A, where the networks clearly did.
+- **Average reliability carried over to observations within wide limits.** Every model's spread/error ratio in observations was compatible with 1, but the intervals span roughly ±15 %. With 130 years, the overconfidence seen in Part A after a change of system (ratio ≈0.8) could not be detected here.
+- **The networks learned a state-dependent spread, and the evidence that it orders real errors is suggestive but not conclusive.**
+  - In all three networks the predicted spread rose with October Niño-3.4 (r = 0.68–0.85): wetter El Niño winters were forecast as more uncertain, drier La Niña winters as less.
+  - In observations the networks' most-confident half of years had 18–21 % smaller errors than all years (unadjusted p = 0.008–0.033). After Holm correction this is not significant at 5 %. It does hold at a 5 % false discovery rate.
+  - In CESM2-LE the same effect was smaller (−6 %) and showed the same pattern: it passes the false-discovery-rate correction but not Holm's.
+- **Open question raised by the size difference** (−18 to −21 % in observations versus −6 % in the model): observed precipitation is more skewed (skewness 1.1 versus 0.7), and dry La Niña winters are bounded near zero rainfall. Does that make spread more predictable in the real world than in CESM2, or is the larger observed effect sampling noise in 130 years? The SMYLE comparison below is designed to help answer it.
+
+### Perfect-model ground truth for real years (CESM2 SMYLE)
+
+Part B has no exact truth for the predictability of each real year. The closest available reference is an *initialised* hindcast ensemble with the same model: CESM2 SMYLE (Yeager et al., 2022) starts 20 members from the observed state on 1 November of every year 1970–2019. For each real year, the spread of those 20 members for January–March Southwest precipitation is CESM2's own forecast uncertainty from that exact initial state. It plays the role the 1000-member truth plays in Part A, with three caveats: it is the truth *of the model*, not of the real climate; 20 members give a spread estimate with about 16 % sampling error; and it uses the full initial state, so it is an upper bound on what the statistical models could know.
+
+The tests (family `B-smyle` in `significance.py`):
+1. Does each model's predicted spread rank the 50 real years like the SMYLE spread does?
+2. Does the SMYLE spread itself order the observed errors?
+3. Is SMYLE better than climatology?
+
+Code and tests are in place (`knownpred.data.smyle`, `tests/test_smyle.py`). Run with:
+
+```bash
+python -m knownpred.experiments.part_b --stage smyle      # needs access to thredds.rda.ucar.edu
+python -m knownpred.experiments.significance
+```
 
 ## Repository layout
 
@@ -135,6 +159,7 @@ src/knownpred/
   truth.py               Monte Carlo ground truth
   distributions.py       Gaussian and SHASH distributions (NumPy reference)
   metrics.py             CRPS, PIT, spread-skill, discard curves, block bootstrap
+  stats_tests.py         Diebold-Mariano (HAC), circular-shift test, Holm / Benjamini-Hochberg
   baselines.py           climatology, linear, two-stage gradient boosting
   models/                PyTorch networks, losses, training, deep ensemble
   attribution.py         permutation importance (models and truth), integrated gradients
@@ -156,6 +181,7 @@ python -m knownpred.experiments.part_a --quick       # smoke test
 python -m knownpred.experiments.part_a               # full Part A
 python -m knownpred.data.download                    # Part B data
 python -m knownpred.experiments.part_b               # Part B
+python -m knownpred.experiments.significance         # formal tests, multiple-testing control
 python -m knownpred.plotting                         # figures and tables
 ```
 

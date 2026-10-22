@@ -38,11 +38,17 @@ def crps_ensemble(y, members, fair: bool = False) -> np.ndarray:
 
     Uses CRPS = E|X - y| - 0.5 E|X - X'| with the O(M log M) sorted-ensemble
     identity for the second term. ``fair=True`` gives the unbiased estimator
-    of Ferro (2014), appropriate for small ensembles.
+    of Ferro (2014), appropriate for small ensembles. The fair estimator needs
+    at least two members; ordinary empirical CRPS also allows one member.
     """
     y = np.asarray(y, float)
-    x = np.sort(np.asarray(members, float), axis=-1)
-    M = x.shape[-1]
+    members = np.asarray(members, float)
+    if members.ndim != 2 or members.shape[1] == 0:
+        raise ValueError("members must be a non-empty array of shape (N, M)")
+    M = members.shape[1]
+    if fair and M < 2:
+        raise ValueError("fair CRPS requires at least two ensemble members")
+    x = np.sort(members, axis=-1)
     term1 = np.abs(x - y[..., None]).mean(axis=-1)
     i = np.arange(1, M + 1)
     pair_sum = 2.0 * np.sum((2 * i - M - 1) * x, axis=-1)  # sum_{i,j} |x_i - x_j|
